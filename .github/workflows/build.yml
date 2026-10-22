@@ -7,15 +7,22 @@ on:
 
 jobs:
   build-ipa:
-    runs-on: macos-15
+    runs-on: macos-14
     timeout-minutes: 40
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Select Newest Xcode
+        run: |
+          ls /Applications | grep -i '^Xcode' || true
+          NEWEST="$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)"
+          if [ -n "$NEWEST" ]; then sudo xcode-select -s "$NEWEST"; fi
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i iphoneos || true
+
       - name: Show Toolchain
         run: |
-          xcodebuild -version
           xcodegen version || true
           swift --version
 
