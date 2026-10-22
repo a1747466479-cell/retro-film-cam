@@ -1287,7 +1287,7 @@ struct LightTableScannerView: View {
         }
         .overlay(alignment: .top) {
             if let msg = saveToastMessage {
-                Text(msg).font(.system(size: 12, weight: .bold)).foregroundColor(.black).padding(.horizontal, 14).padding(.vertical: 8).background(Color.green).cornerRadius(16).padding(.top, 50)
+                Text(msg).font(.system(size: 12, weight: .bold)).foregroundColor(.black).padding(.horizontal, 14).padding(.vertical, 8).background(Color.green).cornerRadius(16).padding(.top, 50)
             }
         }
     }
