@@ -1,0 +1,80 @@
+name: Build iOS Film Camera IPA
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-ipa:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Show Toolchain
+        run: |
+          xcodebuild -version
+          xcodegen version || true
+          swift --version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen || brew upgrade xcodegen
+
+      - name: Generate Xcode Project
+        run: xcodegen generate
+
+      - name: Build Unsigned App
+        run: |
+          set -o pipefail
+          xcodebuild clean build \
+            -project RetroFilmCam.xcodeproj \
+            -scheme RetroFilmCam \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            -quiet \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_ENTITLEMENTS="" \
+            2>&1 | tee xcodebuild.log
+          echo "==== BUILD RESULT ===="
+          grep -E "^(\*\* BUILD (SUCCEEDED|FAILED) \*\*|error:)" xcodebuild.log | head -40 || true
+
+      - name: Package IPA
+        run: |
+          set -e
+          APP="build/Build/Products/Release-iphoneos/RetroFilmCam.app"
+          if [ ! -d "$APP" ]; then echo "!! app not found"; ls -R build/Build/Products || true; exit 1; fi
+          rm -rf Payload RetroFilmCam-Unsigned.ipa
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          rm -rf Payload/RetroFilmCam.app/_CodeSignature || true
+          rm -f  Payload/RetroFilmCam.app/embedded.mobileprovision || true
+          zip -qry RetroFilmCam-Unsigned.ipa Payload
+          echo "==== IPA ===="
+          ls -lh RetroFilmCam-Unsigned.ipa
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$APP/Info.plist" || true
+          /usr/libexec/PlistBuddy -c "Print :MinimumOSVersion" "$APP/Info.plist" || true
+          lipo -info "$APP/RetroFilmCam" || file "$APP/RetroFilmCam"
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RetroFilmCam-IPA
+          path: RetroFilmCam-Unsigned.ipa
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Build Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: RetroFilmCam-BuildLog
+          path: xcodebuild.log
+          if-no-files-found: warn
+          retention-days: 7
