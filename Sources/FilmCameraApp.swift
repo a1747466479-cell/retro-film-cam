@@ -34,9 +34,18 @@ struct FilmFrame: Identifiable, Codable {
     var rawFileName: String
     var captureDate: Date
     var isScanned: Bool = false
-    var scanProgress: Double = 0.0
     var exposureEV: Double = 0.0
     var warmthWB: Double = 0.0
+}
+
+// 整个胶卷档案（对应一个金属暗盒仓库里的卷）
+struct FilmRollData: Identifiable, Codable {
+    var id: UUID = UUID()
+    var stockID: String
+    var capacity: Int
+    var frames: [FilmFrame]
+    var isDeveloped: Bool = false
+    var createdDate: Date = Date()
 }
 
 enum ExportBorderStyle: String, CaseIterable, Identifiable {
@@ -318,12 +327,14 @@ final class FilmColorEngine {
         return result
     }
 
+    // 关键修正：参考图五，生成【上下横向齿孔】的 35mm 胶片大边框
     func composeFinalExportImage(positiveImage: UIImage, stock: FilmStock, frameNumber: Int, captureDate: Date, borderStyle: ExportBorderStyle, includeDateStamp: Bool) -> UIImage {
         let baseSize = positiveImage.size
         let hasSprocket = (borderStyle == .sprocket35mm)
+        // 上下增加齿孔黑边条高度（参考图五，上下横向排布）
         let topBottomBarHeight = hasSprocket ? baseSize.height * 0.16 : 0
-        let sideMargin = hasSprocket ? baseSize.width * 0.04 : 0
-        let canvasSize = CGSize(width: baseSize.width + sideMargin * 2, height: baseSize.height + topBottomBarHeight * 2)
+        let sideWidth = hasSprocket ? baseSize.width * 0.04 : 0
+        let canvasSize = CGSize(width: baseSize.width + sideWidth * 2, height: baseSize.height + topBottomBarHeight * 2)
 
         let renderer = UIGraphicsImageRenderer(size: canvasSize)
         return renderer.image { ctx in
@@ -332,33 +343,35 @@ final class FilmColorEngine {
                 UIColor(red: 0.06, green: 0.06, blue: 0.06, alpha: 1.0).setFill()
                 cgCtx.fill(CGRect(origin: .zero, size: canvasSize))
 
-                let holeCount = 8
-                let holeWidth = canvasSize.width * 0.065
+                // 上下横向齿孔阵列
+                let holeCount = 10
+                let holeWidth = canvasSize.width * 0.055
                 let holeHeight = topBottomBarHeight * 0.42
                 let spacing = (canvasSize.width - CGFloat(holeCount) * holeWidth) / CGFloat(holeCount + 1)
 
                 UIColor(red: 0.94, green: 0.94, blue: 0.92, alpha: 1.0).setFill()
                 for i in 0..<holeCount {
                     let x = spacing + CGFloat(i) * (holeWidth + spacing)
-                    let topRect = CGRect(x: x, y: topBottomBarHeight * 0.34, width: holeWidth, height: holeHeight)
-                    let bottomRect = CGRect(x: x, y: canvasSize.height - topBottomBarHeight + topBottomBarHeight * 0.24, width: holeWidth, height: holeHeight)
+                    let topRect = CGRect(x: x, y: topBottomBarHeight * 0.28, width: holeWidth, height: holeHeight)
+                    let bottomRect = CGRect(x: x, y: canvasSize.height - topBottomBarHeight + topBottomBarHeight * 0.30, width: holeWidth, height: holeHeight)
                     UIBezierPath(roundedRect: topRect, cornerRadius: holeWidth * 0.18).fill()
                     UIBezierPath(roundedRect: bottomRect, cornerRadius: holeWidth * 0.18).fill()
                 }
 
+                // 顶部齿孔边框喷码字样
                 let fontSize = max(12, topBottomBarHeight * 0.18)
                 let attrs: [NSAttributedString.Key: Any] = [
                     .font: UIFont.monospacedSystemFont(ofSize: fontSize, weight: .bold),
                     .foregroundColor: UIColor(red: 0.88, green: 0.64, blue: 0.22, alpha: 0.88)
                 ]
                 let topText = "\(stock.edgeCode)   ISO \(stock.iso)" as NSString
-                topText.draw(at: CGPoint(x: sideMargin, y: topBottomBarHeight * 0.08), withAttributes: attrs)
+                topText.draw(at: CGPoint(x: sideWidth + 10, y: topBottomBarHeight * 0.08), withAttributes: attrs)
 
                 let frameCode = String(format: "▶ %02dA", frameNumber) as NSString
-                frameCode.draw(at: CGPoint(x: canvasSize.width - sideMargin - fontSize * 4.5, y: canvasSize.height - topBottomBarHeight * 0.25), withAttributes: attrs)
+                frameCode.draw(at: CGPoint(x: canvasSize.width - sideWidth - fontSize * 5.2, y: canvasSize.height - topBottomBarHeight * 0.22), withAttributes: attrs)
             }
 
-            let photoRect = CGRect(x: sideMargin, y: topBottomBarHeight, width: baseSize.width, height: baseSize.height)
+            let photoRect = CGRect(x: sideWidth, y: topBottomBarHeight, width: baseSize.width, height: baseSize.height)
             positiveImage.draw(in: photoRect)
 
             if includeDateStamp {
@@ -385,12 +398,16 @@ final class FilmColorEngine {
     }
 }
 
-// MARK: - 4. ViewModel
+// MARK: - 4. ViewModel (支持胶卷仓库与多卷管理)
 final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate, AVCaptureSessionControlsDelegate {
     @Published var stage: AppStage = .shooting
     @Published var allStocks: [FilmStock] = FilmStock.builtInStocks
     @Published var currentStock: FilmStock = FilmStock.builtInStocks[0]
     @Published var maxFramesPerRoll: Int = 12
+
+    // 仓库存储：所有已经拍过或正在拍的胶卷列表
+    @Published var savedRolls: [FilmRollData] = []
+    @Published var currentActiveRollIndex: Int = 0
 
     @Published var frames: [FilmFrame] = []
     @Published var isShutterLocked: Bool = false
@@ -411,6 +428,7 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
     override init() {
         super.init()
         loadCustomStocks()
+        loadSavedRolls()
         setupCameraWithHardwareControl()
     }
 
@@ -547,6 +565,12 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
             self.advanceProgress = 0.0
             self.hardwareAdvanceSlider?.value = 0.0
             if self.frames.count >= self.maxFramesPerRoll {
+                // 拍满一卷：自动存入仓库，并直接打包进暗房
+                let newRoll = FilmRollData(stockID: self.currentStock.id, capacity: self.maxFramesPerRoll, frames: self.frames, isDeveloped: false)
+                self.savedRolls.insert(newRoll, at: 0)
+                self.currentActiveRollIndex = 0
+                self.saveSavedRolls()
+
                 self.stage = .darkroom
                 self.darkroomRemainingSeconds = self.darkroomTotalSeconds
                 self.isDeveloping = false
@@ -578,6 +602,10 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
     func finishDevelopingAndGoToScanner() {
         darkroomTimer?.invalidate()
         isDeveloping = false
+        if savedRolls.indices.contains(currentActiveRollIndex) {
+            savedRolls[currentActiveRollIndex].isDeveloped = true
+            saveSavedRolls()
+        }
         HapticManager.shared.playFilmWoundLock()
         stage = .lightTableScanner
     }
@@ -604,6 +632,16 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
     private func loadCustomStocks() {
         if let data = UserDefaults.standard.data(forKey: "SavedCustomFilmStocks"), let customs = try? JSONDecoder().decode([FilmStock].self, from: data) {
             allStocks = FilmStock.builtInStocks + customs
+        }
+    }
+
+    private func saveSavedRolls() {
+        if let data = try? JSONEncoder().encode(savedRolls) { UserDefaults.standard.set(data, forKey: "SavedFilmRollsWarehouse") }
+    }
+
+    private func loadSavedRolls() {
+        if let data = UserDefaults.standard.data(forKey: "SavedFilmRollsWarehouse"), let rolls = try? JSONDecoder().decode([FilmRollData].self, from: data) {
+            savedRolls = rolls
         }
     }
 
@@ -665,9 +703,10 @@ struct RetroFilmCamApp: App {
     }
 }
 
-// MARK: - 舞台一：红树下 M 系列机械旁轴美学拍摄界面
+// MARK: - 舞台一：红树下 M 系列机械旁轴美学拍摄界面（取景框已修正为横屏横构图）
 struct VintageCameraShootingView: View {
     @ObservedObject var vm: FilmCameraViewModel
+    @State private var showWarehouseSheet = false
     @State private var showRollSheet = false
     @State private var showCubeImporter = false
     @State private var importAlertMessage: String?
@@ -682,23 +721,11 @@ struct VintageCameraShootingView: View {
                     RoundedRectangle(cornerRadius: 16)
                         .fill(
                             LinearGradient(
-                                colors: [
-                                    Color(red: 0.40, green: 0.40, blue: 0.38),
-                                    Color(red: 0.20, green: 0.20, blue: 0.19),
-                                    Color(red: 0.30, green: 0.29, blue: 0.27),
-                                    Color(red: 0.12, green: 0.12, blue: 0.11)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
+                                colors: [Color(red: 0.4, green: 0.4, blue: 0.38), Color(red: 0.2, green: 0.2, blue: 0.19), Color(red: 0.3, green: 0.29, blue: 0.27), Color(red: 0.12, green: 0.12, blue: 0.11)],
+                                startPoint: .top, endPoint: .bottom
                             )
                         )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .strokeBorder(
-                                    LinearGradient(colors: [.white.opacity(0.5), .clear, .white.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing),
-                                    lineWidth: 1.2
-                                )
-                        )
+                        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(LinearGradient(colors: [.white.opacity(0.5), .clear, .white.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.2))
                         .shadow(color: .black.opacity(0.85), radius: 10, x: 0, y: 6)
 
                     VStack(spacing: 8) {
@@ -720,39 +747,22 @@ struct VintageCameraShootingView: View {
                         HStack(spacing: 10) {
                             Button { showRollSheet = true } label: {
                                 HStack(spacing: 6) {
-                                    RoundedRectangle(cornerRadius: 2)
-                                        .fill(Color(hex: vm.currentStock.themeColorHex))
-                                        .frame(width: 5, height: 26)
+                                    RoundedRectangle(cornerRadius: 2).fill(Color(hex: vm.currentStock.themeColorHex)).frame(width: 5, height: 26)
                                     VStack(alignment: .leading, spacing: 1) {
-                                        Text(vm.currentStock.name)
-                                            .font(.system(size: 11, weight: .heavy, design: .monospaced))
-                                            .foregroundColor(Color(red: 1.0, green: 0.86, blue: 0.38))
-                                        Text("ISO \(vm.currentStock.iso) / \(vm.maxFramesPerRoll)EXP")
-                                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-                                            .foregroundColor(.white.opacity(0.7))
+                                        Text(vm.currentStock.name).font(.system(size: 11, weight: .heavy, design: .monospaced)).foregroundColor(Color(red: 1.0, green: 0.86, blue: 0.38))
+                                        Text("ISO \(vm.currentStock.iso) / \(vm.maxFramesPerRoll)EXP").font(.system(size: 8.5, weight: .semibold, design: .monospaced)).foregroundColor(.white.opacity(0.7))
                                     }
                                 }
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 5)
-                                .background(Color.black.opacity(0.85))
-                                .cornerRadius(5)
-                                .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.white.opacity(0.2), lineWidth: 1))
+                                .padding(.horizontal, 8).padding(.vertical, 5).background(Color.black.opacity(0.85)).cornerRadius(5).overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.white.opacity(0.2), lineWidth: 1))
                             }
 
                             Spacer()
 
                             ZStack {
-                                Circle()
-                                    .fill(Color.black)
-                                    .frame(width: 42, height: 42)
-                                    .overlay(Circle().stroke(LinearGradient(colors: [.gray, .black, .white.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 2))
+                                Circle().fill(Color.black).frame(width: 42, height: 42).overlay(Circle().stroke(LinearGradient(colors: [.gray, .black, .white.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 2))
                                 VStack(spacing: 0) {
-                                    Text("FRAME")
-                                        .font(.system(size: 5.5, weight: .bold, design: .monospaced))
-                                        .foregroundColor(.gray)
-                                    Text(String(format: "%02d", vm.frames.count))
-                                        .font(.system(size: 15, weight: .black, design: .monospaced))
-                                        .foregroundColor(vm.isShutterLocked ? .orange : Color(red: 0.95, green: 0.92, blue: 0.82))
+                                    Text("FRAME").font(.system(size: 5.5, weight: .bold, design: .monospaced)).foregroundColor(.gray)
+                                    Text(String(format: "%02d", vm.frames.count)).font(.system(size: 15, weight: .black, design: .monospaced)).foregroundColor(vm.isShutterLocked ? .orange : Color(red: 0.95, green: 0.92, blue: 0.82))
                                 }
                             }
 
@@ -767,87 +777,70 @@ struct VintageCameraShootingView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 12)
 
-                // 2. 机身蒙皮与红树下铭牌
+                // 2. 机身蒙皮与横向取景框（长宽比已设为标准的 4:3 横构图）
                 ZStack {
                     RoundedRectangle(cornerRadius: 22)
                         .fill(Color(red: 0.08, green: 0.08, blue: 0.09))
                         .overlay(LeatheretteGrainCanvas().clipShape(RoundedRectangle(cornerRadius: 22)).opacity(0.35))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 22)
-                                .strokeBorder(LinearGradient(colors: [.white.opacity(0.25), .black.opacity(0.95), .white.opacity(0.12)], startPoint: .top, endPoint: .bottom), lineWidth: 2)
-                        )
+                        .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(LinearGradient(colors: [.white.opacity(0.25), .black.opacity(0.95), .white.opacity(0.12)], startPoint: .top, endPoint: .bottom), lineWidth: 2))
                         .shadow(color: .black.opacity(0.9), radius: 12, x: 0, y: 8)
 
-                    VStack(spacing: 14) {
+                    VStack(spacing: 12) {
                         HStack {
                             ZStack {
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(
-                                        RadialGradient(colors: [Color(red: 0.92, green: 0.16, blue: 0.13), Color(red: 0.60, green: 0.06, blue: 0.05)], center: .topLeading, startRadius: 2, endRadius: 22)
-                                    )
-                                    .frame(width: 62, height: 20)
-                                Text("红树下")
-                                    .font(.system(size: 11, weight: .bold, design: .serif))
-                                    .foregroundColor(.white)
+                                RoundedRectangle(cornerRadius: 4).fill(RadialGradient(colors: [Color(red: 0.92, green: 0.16, blue: 0.13), Color(red: 0.60, green: 0.06, blue: 0.05)], center: .topLeading, startRadius: 2, endRadius: 22)).frame(width: 62, height: 20)
+                                Text("红树下").font(.system(size: 11, weight: .bold, design: .serif)).foregroundColor(.white)
                             }
                             .shadow(color: .black.opacity(0.6), radius: 3, x: 0, y: 2)
 
                             Spacer()
 
-                            HStack(spacing: 5) {
-                                Circle()
-                                    .fill(vm.isHardwareControlActive ? Color.green : (vm.isShutterLocked ? Color.orange : Color.red))
-                                    .frame(width: 6, height: 6)
-                                Text(vm.isHardwareControlActive ? "M-CONTROL ACTIVE" : (vm.isShutterLocked ? "LOCKED 待过片" : "READY"))
-                                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                    .foregroundColor(Color(red: 0.85, green: 0.82, blue: 0.75))
+                            // “胶卷仓库”入口按钮：随时查看已拍好的胶卷
+                            Button {
+                                showWarehouseSheet = true
+                            } label: {
+                                HStack(spacing: 5) {
+                                    Image(systemName: "cylinder.split.1x2.fill").foregroundColor(.yellow)
+                                    Text("胶卷仓库 (\(vm.savedRolls.count))")
+                                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                        .foregroundColor(.yellow)
+                                }
+                                .padding(.horizontal, 9)
+                                .padding(.vertical, 5)
+                                .background(Color.black.opacity(0.75))
+                                .cornerRadius(10)
+                                .overlay(Capsule().stroke(Color.yellow.opacity(0.4), lineWidth: 1))
                             }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.black.opacity(0.7))
-                            .cornerRadius(10)
-                            .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.8))
                         }
                         .padding(.horizontal, 20)
 
+                        // 关键修正：标准横构图取景框（宽 280, 高 210，完美横过来）
                         ZStack {
                             CameraPreviewView(session: vm.session) { vm.handlePhysicalCameraButtonPress() }
-                                .frame(width: 272, height: 202)
+                                .frame(width: 280, height: 210)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
 
                             ZStack {
-                                RoundedRectangle(cornerRadius: 4)
-                                    .stroke(Color.white.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: [6, 3]))
-                                    .padding(14)
-                                Rectangle()
-                                    .fill(Color.yellow.opacity(0.15))
-                                    .frame(width: 40, height: 28)
-                                    .overlay(Rectangle().stroke(Color.yellow.opacity(0.6), lineWidth: 0.8))
+                                RoundedRectangle(cornerRadius: 4).stroke(Color.white.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: [6, 3])).padding(14)
+                                Rectangle().fill(Color.yellow.opacity(0.15)).frame(width: 40, height: 28).overlay(Rectangle().stroke(Color.yellow.opacity(0.6), lineWidth: 0.8))
                             }
-                            .frame(width: 272, height: 202)
+                            .frame(width: 280, height: 210)
                             .allowsHitTesting(false)
 
                             LinearGradient(colors: [.purple.opacity(0.1), .clear, .cyan.opacity(0.06), .clear], startPoint: .topLeading, endPoint: .bottomTrailing)
-                                .frame(width: 272, height: 202)
+                                .frame(width: 280, height: 210)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                                 .allowsHitTesting(false)
 
                             if vm.isShutterLocked {
                                 RoundedRectangle(cornerRadius: 10)
                                     .fill(Color.black.opacity(0.75))
-                                    .frame(width: 272, height: 202)
+                                    .frame(width: 280, height: 210)
                                     .overlay(
                                         VStack(spacing: 8) {
-                                            Image(systemName: "hand.tap.fill")
-                                                .font(.system(size: 26))
-                                                .foregroundColor(.orange)
-                                            Text(vm.frames.count >= vm.maxFramesPerRoll
-                                                 ? "整卷已拍满！请滑动相机键退卷送洗"
-                                                 : "快门机械锁死 · 请滑动【相机控制键】或拨动扳手过片")
-                                                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                                .foregroundColor(.white)
-                                                .multilineTextAlignment(.center)
-                                                .padding(.horizontal, 16)
+                                            Image(systemName: "hand.tap.fill").font(.system(size: 26)).foregroundColor(.orange)
+                                            Text(vm.frames.count >= vm.maxFramesPerRoll ? "整卷已拍满！自动进入暗房" : "快门机械锁死 · 请滑动【相机控制键】过片")
+                                                .font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundColor(.white).multilineTextAlignment(.center).padding(.horizontal, 16)
                                         }
                                     )
                             }
@@ -857,18 +850,12 @@ struct VintageCameraShootingView: View {
                         .shadow(color: .black.opacity(0.9), radius: 8, x: 0, y: 5)
 
                         HStack(spacing: 8) {
-                            Image(systemName: "camera.aperture")
-                                .foregroundColor(.orange)
-                            Text("BLIND BOX · 拍满 \(vm.maxFramesPerRoll) 张后方可冲洗查看")
-                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                                .foregroundColor(.white.opacity(0.75))
+                            Image(systemName: "camera.aperture").foregroundColor(.orange)
+                            Text("BLIND BOX · 拍满 \(vm.maxFramesPerRoll) 张后进入暗房冲洗").font(.system(size: 9.5, weight: .bold, design: .monospaced)).foregroundColor(.white.opacity(0.75))
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.black.opacity(0.6))
-                        .cornerRadius(6)
+                        .padding(.horizontal, 12).padding(.vertical, 5).background(Color.black.opacity(0.6)).cornerRadius(6)
                     }
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 12)
                 }
                 .padding(.horizontal, 12)
 
@@ -886,21 +873,10 @@ struct VintageCameraShootingView: View {
 
                     Button { vm.capturePhoto() } label: {
                         ZStack {
-                            Circle()
-                                .fill(LinearGradient(colors: [Color(white: 0.7), Color(white: 0.25), Color(white: 0.5)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                .frame(width: 80, height: 80)
-                                .shadow(color: .black.opacity(0.8), radius: 6, x: 0, y: 4)
-                            Circle()
-                                .stroke(Color.black.opacity(0.6), style: StrokeStyle(lineWidth: 3, dash: [2, 2]))
-                                .frame(width: 74, height: 74)
-                            Circle()
-                                .fill(RadialGradient(colors: vm.isShutterLocked ? [Color(white: 0.3), Color(white: 0.15)] : [Color(red: 0.9, green: 0.18, blue: 0.14), Color(red: 0.55, green: 0.06, blue: 0.05)], center: .topLeading, startRadius: 4, endRadius: 40))
-                                .frame(width: 60, height: 60)
-                                .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
-                            Circle()
-                                .fill(Color(white: 0.1))
-                                .frame(width: 16, height: 16)
-                                .overlay(Circle().stroke(Color(white: 0.5), lineWidth: 1.2))
+                            Circle().fill(LinearGradient(colors: [Color(white: 0.7), Color(white: 0.25), Color(white: 0.5)], startPoint: .topLeading, endPoint: .bottomTrailing)).frame(width: 76, height: 76).shadow(color: .black.opacity(0.8), radius: 6, x: 0, y: 4)
+                            Circle().stroke(Color.black.opacity(0.6), style: StrokeStyle(lineWidth: 3, dash: [2, 2])).frame(width: 70, height: 70)
+                            Circle().fill(RadialGradient(colors: vm.isShutterLocked ? [Color(white: 0.3), Color(white: 0.15)] : [Color(red: 0.9, green: 0.18, blue: 0.14), Color(red: 0.55, green: 0.06, blue: 0.05)], center: .topLeading, startRadius: 4, endRadius: 38)).frame(width: 56, height: 56).overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+                            Circle().fill(Color(white: 0.1)).frame(width: 14, height: 14).overlay(Circle().stroke(Color(white: 0.5), lineWidth: 1.2))
                         }
                     }
                     .disabled(vm.isShutterLocked)
@@ -911,6 +887,9 @@ struct VintageCameraShootingView: View {
                 }
                 .padding(.bottom, 6)
             }
+        }
+        .sheet(isPresented: $showWarehouseSheet) {
+            FilmWarehouseView(vm: vm)
         }
         .sheet(isPresented: $showRollSheet) { FilmRollSelectorSheet(vm: vm) }
         .fileImporter(isPresented: $showCubeImporter, allowedContentTypes: [UTType(filenameExtension: "cube") ?? .data], allowsMultipleSelection: false) { result in
@@ -926,6 +905,99 @@ struct VintageCameraShootingView: View {
         .alert("工坊提示", isPresented: Binding(get: { importAlertMessage != nil }, set: { if !$0 { importAlertMessage = nil } })) {
             Button("确定", role: .cancel) {}
         } message: { Text(importAlertMessage ?? "") }
+    }
+}
+
+// MARK: - 拟物化“胶卷仓库”界面（金属暗盒一盒一盒摆放好，点击直达扫描看片台）
+struct FilmWarehouseView: View {
+    @ObservedObject var vm: FilmCameraViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color(red: 0.05, green: 0.05, blue: 0.06).ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("已冲洗与在库的胶卷暗盒")
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                            .foregroundColor(.gray)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 10)
+
+                        if vm.savedRolls.isEmpty {
+                            VStack(spacing: 12) {
+                                Image(systemName: "cylinder.split.1x2")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.gray)
+                                Text("仓库空空如也\n快去拍满一卷胶卷存入暗盒吧！")
+                                    .font(.system(size: 13, design: .monospaced))
+                                    .foregroundColor(.gray)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 80)
+                        } else {
+                            // 金属暗盒网格摆放
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 16)], spacing: 16) {
+                                ForEach(Array(vm.savedRolls.enumerated()), id: \.element.id) { idx, roll in
+                                    let stock = vm.allStocks.first(where: { $0.id == roll.stockID }) ?? vm.allStocks[0]
+                                    Button {
+                                        vm.currentActiveRollIndex = idx
+                                        vm.frames = roll.frames
+                                        vm.currentStock = stock
+                                        vm.stage = .lightTableScanner
+                                        dismiss()
+                                    } label: {
+                                        VStack(spacing: 8) {
+                                            // 拟物金属暗盒外观
+                                            ZStack {
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .fill(
+                                                        LinearGradient(
+                                                            colors: [Color(hex: stock.themeColorHex), Color.black],
+                                                            startPoint: .topLeading, endPoint: .bottomTrailing
+                                                        )
+                                                    )
+                                                    .frame(height: 75)
+                                                    .overlay(
+                                                        VStack(spacing: 2) {
+                                                            Text(stock.name)
+                                                                .font(.system(size: 13, weight: .heavy, design: .monospaced))
+                                                                .foregroundColor(.white)
+                                                            Text("\(roll.frames.count) 张成片")
+                                                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                                                .foregroundColor(.yellow)
+                                                        }
+                                                    )
+                                                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.25), lineWidth: 1.5))
+                                            }
+                                            Text(roll.isDeveloped ? "已冲洗扫描" : "待暗房冲洗")
+                                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                                .foregroundColor(roll.isDeveloped ? .green : .orange)
+                                        }
+                                        .padding(10)
+                                        .background(Color(white: 0.11))
+                                        .cornerRadius(12)
+                                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                        }
+                    }
+                    .padding(.bottom, 30)
+                }
+            }
+            .navigationTitle("胶卷暗盒仓库")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("关闭") { dismiss() }.foregroundColor(.orange)
+                }
+            }
+        }
     }
 }
 
@@ -967,12 +1039,12 @@ struct KnurledMetalDialButton: View {
         ZStack {
             Circle()
                 .fill(LinearGradient(colors: [Color(white: 0.26), Color(white: 0.1)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 60, height: 60)
+                .frame(width: 58, height: 58)
                 .overlay(Circle().stroke(Color.white.opacity(0.2), style: StrokeStyle(lineWidth: 2, dash: [3, 2])))
                 .shadow(color: .black.opacity(0.7), radius: 4, x: 0, y: 3)
             VStack(spacing: 3) {
-                Image(systemName: icon).font(.system(size: 16, weight: .semibold))
-                Text(title).font(.system(size: 9, weight: .bold, design: .monospaced))
+                Image(systemName: icon).font(.system(size: 15, weight: .semibold))
+                Text(title).font(.system(size: 8.5, weight: .bold, design: .monospaced))
             }
             .foregroundColor(accentColor)
         }
@@ -1147,7 +1219,7 @@ struct FilmRollSelectorSheet: View {
 
 // 阶段二：红光暗房
 struct DarkroomDevelopingView: View {
-    @ObservedObject var vm: FilmCameraViewModel
+    @ObservedObject vm: FilmCameraViewModel
     @State private var selectedWaitSeconds: Int = 60
     var body: some View {
         ZStack {
@@ -1190,7 +1262,7 @@ struct DarkroomDevelopingView: View {
     }
 }
 
-// 阶段三：看片台扫描与导出
+// MARK: - 阶段三：发光看片台（参考图三多格平铺、一键全选扫描、支持独立微调与一键批量导出）
 struct LightTableScannerView: View {
     @ObservedObject var vm: FilmCameraViewModel
     @State private var selectedIndex: Int = 0
@@ -1199,56 +1271,69 @@ struct LightTableScannerView: View {
     @State private var saveToastMessage: String?
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
+            // 顶部发光看片台控制栏
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("HONGSHUXIA LIGHT TABLE 5500K").font(.system(size: 13, weight: .heavy, design: .monospaced)).foregroundColor(.black)
-                    Text("滑动扫描滑轨完成负片反转正片").font(.system(size: 10.5)).foregroundColor(.black.opacity(0.65))
+                    Text("HONGSHUXIA LIGHT TABLE 5500K").font(.system(size: 12, weight: .heavy, design: .monospaced)).foregroundColor(.black)
+                    Text("网格平铺看片台 · 支持一键全部扫描与批量导出").font(.system(size: 10)).foregroundColor(.black.opacity(0.65))
                 }
                 Spacer()
-                Button { vm.loadNewRoll(stock: vm.currentStock, capacity: vm.maxFramesPerRoll) } label: {
-                    Text("装新卷").font(.system(size: 11, weight: .bold)).foregroundColor(.white).padding(.horizontal, 10).padding(.vertical, 6).background(Color.black).cornerRadius(6)
+                Button { vm.stage = .shooting } label: {
+                    Text("返回相机").font(.system(size: 11, weight: .bold)).foregroundColor(.white).padding(.horizontal, 10).padding(.vertical, 5).background(Color.black).cornerRadius(6)
                 }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .background(Color(white: 0.95))
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 0) {
+            // 参考图三：多格平铺看片台（网格展示整卷底片，点击可选中单张进行详细调参）
+            ScrollView {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 10)], spacing: 10) {
                     ForEach(Array(vm.frames.enumerated()), id: \.element.id) { idx, frame in
-                        FilmStripNegativeCell(rawImage: vm.loadRawImage(for: frame), stock: vm.currentStock, frame: frame, isSelected: idx == selectedIndex)
-                            .onTapGesture { selectedIndex = idx; HapticManager.shared.playRatchetTick() }
+                        let rawImg = vm.loadRawImage(for: frame)
+                        let displayImg = frame.isScanned
+                            ? FilmColorEngine.shared.renderPositive(from: rawImg, stock: vm.currentStock, ev: frame.exposureEV, warmth: frame.warmthWB)
+                            : FilmColorEngine.shared.renderOrangeNegative(from: rawImg)
+
+                        VStack(spacing: 3) {
+                            // 上齿孔条
+                            HStack(spacing: 3) { ForEach(0..<4, id: \.self) { _ in RoundedRectangle(cornerRadius: 1).fill(Color(red: 0.9, green: 0.9, blue: 0.88)).frame(width: 8, height: 4) } }
+                            Image(uiImage: displayImg)
+                                .resizable().scaledToFill().frame(width: 130, height: 86).clipped()
+                            // 下齿孔与片号
+                            HStack(spacing: 3) {
+                                Text(String(format: "%02dA", frame.frameNumber)).font(.system(size: 6.5, weight: .bold, design: .monospaced)).foregroundColor(.orange)
+                                ForEach(0..<3, id: \.self) { _ in RoundedRectangle(cornerRadius: 1).fill(Color(red: 0.9, green: 0.9, blue: 0.88)).frame(width: 8, height: 4) }
+                            }
+                        }
+                        .padding(6)
+                        .background(Color.black)
+                        .cornerRadius(6)
+                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(selectedIndex == idx ? Color.orange : Color.clear, lineWidth: 2.5))
+                        .onTapGesture {
+                            selectedIndex = idx
+                            HapticManager.shared.playRatchetTick()
+                        }
                     }
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(12)
             }
             .background(Color(red: 0.96, green: 0.96, blue: 0.94))
-            .cornerRadius(8)
+            .cornerRadius(10)
             .padding(.horizontal, 10)
+            .frame(maxHeight: 240)
 
+            // 针对当前选中单张图片的微调区（EV / WB）
             if vm.frames.indices.contains(selectedIndex) {
-                let currentFrame = vm.frames[selectedIndex]
-                let rawImg = vm.loadRawImage(for: currentFrame)
-                let negImg = FilmColorEngine.shared.renderOrangeNegative(from: rawImg)
-                let posImg = FilmColorEngine.shared.renderPositive(from: rawImg, stock: vm.currentStock, ev: currentFrame.exposureEV, warmth: currentFrame.warmthWB)
-
-                InteractiveScannerStage(
-                    negativeImage: negImg,
-                    positiveImage: posImg,
-                    scanProgress: Binding(
-                        get: { vm.frames[selectedIndex].scanProgress },
-                        set: { newVal in
-                            vm.frames[selectedIndex].scanProgress = newVal
-                            if newVal >= 0.98 { vm.frames[selectedIndex].isScanned = true }
-                        }
-                    )
-                )
-                .padding(.horizontal, 12)
-
                 VStack(spacing: 8) {
-                    HStack(spacing: 14) {
+                    HStack {
+                        Text("当前第 \(selectedIndex + 1) 张微调").font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundColor(.yellow)
+                        Spacer()
+                        Text(vm.frames[selectedIndex].isScanned ? "已转正片" : "未扫描(橙色负片)").font(.system(size: 10, design: .monospaced)).foregroundColor(.gray)
+                    }
+
+                    HStack(spacing: 12) {
                         HStack {
                             Text("EV").font(.system(size: 10, weight: .bold, design: .monospaced)).foregroundColor(.orange)
                             Slider(value: Binding(get: { vm.frames[selectedIndex].exposureEV }, set: { vm.frames[selectedIndex].exposureEV = $0 }), in: -1.5...1.5).tint(.orange)
@@ -1258,32 +1343,62 @@ struct LightTableScannerView: View {
                             Slider(value: Binding(get: { vm.frames[selectedIndex].warmthWB }, set: { vm.frames[selectedIndex].warmthWB = $0 }), in: -1.0...1.0).tint(.yellow)
                         }
                     }
-
-                    HStack {
-                        Picker("边框", selection: $borderStyle) {
-                            ForEach(ExportBorderStyle.allCases) { style in Text(style.rawValue).tag(style) }
-                        }
-                        .pickerStyle(.segmented)
-
-                        Toggle("荧光日期", isOn: $includeDateStamp).font(.system(size: 11, weight: .semibold)).toggleStyle(.button).tint(.orange)
-                    }
-
-                    Button { exportAndSaveToPhotos(positiveImg: posImg, frame: currentFrame) } label: {
-                        HStack {
-                            Image(systemName: "square.and.arrow.down.fill")
-                            Text(currentFrame.scanProgress >= 0.95 ? "导出成片至系统相册" : "请先向右拖动扫描滑块完成底片扫描")
-                        }
-                        .font(.system(size: 13, weight: .bold)).foregroundColor(.black).frame(maxWidth: .infinity).padding(.vertical, 10)
-                        .background(currentFrame.scanProgress >= 0.95 ? Color.yellow : Color.gray.opacity(0.5)).cornerRadius(8)
-                    }
-                    .disabled(currentFrame.scanProgress < 0.95)
                 }
                 .padding(10)
                 .background(Color.white.opacity(0.06))
                 .cornerRadius(10)
                 .padding(.horizontal, 10)
             }
-            Spacer(minLength: 2)
+
+            // 底部一键扫描与一键批量导出操作台
+            VStack(spacing: 8) {
+                HStack {
+                    Picker("边框", selection: $borderStyle) {
+                        ForEach(ExportBorderStyle.allCases) { style in Text(style.rawValue).tag(style) }
+                    }
+                    .pickerStyle(.segmented)
+
+                    Toggle("荧光日期", isOn: $includeDateStamp).font(.system(size: 11, weight: .semibold)).toggleStyle(.button).tint(.orange)
+                }
+
+                HStack(spacing: 10) {
+                    // 一键全部扫描按钮
+                    Button {
+                        for i in 0..<vm.frames.count {
+                            vm.frames[i].isScanned = true
+                        }
+                        HapticManager.shared.playFilmWoundLock()
+                        saveToastMessage = "已一键扫描整卷底片！"
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { saveToastMessage = nil }
+                    } label: {
+                        HStack {
+                            Image(systemName: "wand.and.stars")
+                            Text("一键全卷扫描")
+                        }
+                        .font(.system(size: 12, weight: .bold)).foregroundColor(.black)
+                        .frame(maxWidth: .infinity).padding(.vertical, 11)
+                        .background(Color.cyan).cornerRadius(8)
+                    }
+
+                    // 一键批量导出整卷成片按钮
+                    Button {
+                        batchExportAllPhotos()
+                    } label: {
+                        HStack {
+                            Image(systemName: "square.and.arrow.down.fill")
+                            Text("一键导出整卷")
+                        }
+                        .font(.system(size: 12, weight: .bold)).foregroundColor(.black)
+                        .frame(maxWidth: .infinity).padding(.vertical, 11)
+                        .background(Color.yellow).cornerRadius(8)
+                    }
+                }
+            }
+            .padding(10)
+            .background(Color.white.opacity(0.08))
+            .cornerRadius(10)
+            .padding(.horizontal, 10)
+            .padding(.bottom, 6)
         }
         .overlay(alignment: .top) {
             if let msg = saveToastMessage {
@@ -1292,15 +1407,21 @@ struct LightTableScannerView: View {
         }
     }
 
-    private func exportAndSaveToPhotos(positiveImg: UIImage, frame: FilmFrame) {
-        let finalImg = FilmColorEngine.shared.composeFinalExportImage(positiveImage: positiveImg, stock: vm.currentStock, frameNumber: frame.frameNumber, captureDate: frame.captureDate, borderStyle: borderStyle, includeDateStamp: includeDateStamp)
-        UIImageWriteToSavedPhotosAlbum(finalImg, nil, nil, nil)
+    // 批量一键导出整卷所有照片到系统相册
+    private func batchExportAllPhotos() {
+        for frame in vm.frames {
+            let rawImg = vm.loadRawImage(for: frame)
+            let posImg = FilmColorEngine.shared.renderPositive(from: rawImg, stock: vm.currentStock, ev: frame.exposureEV, warmth: frame.warmthWB)
+            let finalImg = FilmColorEngine.shared.composeFinalExportImage(positiveImage: posImg, stock: vm.currentStock, frameNumber: frame.frameNumber, captureDate: frame.captureDate, borderStyle: borderStyle, includeDateStamp: includeDateStamp)
+            UIImageWriteToSavedPhotosAlbum(finalImg, nil, nil, nil)
+        }
         HapticManager.shared.playFilmWoundLock()
-        withAnimation { saveToastMessage = "已成功导出第 \(frame.frameNumber) 张（\(borderStyle.rawValue)）！" }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { withAnimation { saveToastMessage = nil } }
+        withAnimation { saveToastMessage = "成功将整卷 \(vm.frames.count) 张成片批量导出至系统相册！" }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { withAnimation { saveToastMessage = nil } }
     }
 }
 
+// 兼容小缩略图渲染
 struct FilmStripNegativeCell: View {
     let rawImage: UIImage
     let stock: FilmStock
@@ -1308,49 +1429,15 @@ struct FilmStripNegativeCell: View {
     let isSelected: Bool
     var body: some View {
         VStack(spacing: 2) {
-            HStack(spacing: 5) { ForEach(0..<4, id: \.self) { _ in RoundedRectangle(cornerRadius: 1).fill(Color(red: 0.96, green: 0.96, blue: 0.94)).frame(width: 8, height: 5) } }
+            HStack(spacing: 4) { ForEach(0..<4, id: \.self) { _ in RoundedRectangle(cornerRadius: 1).fill(Color(red: 0.96, green: 0.96, blue: 0.94)).frame(width: 7, height: 4) } }
             Image(uiImage: frame.isScanned ? FilmColorEngine.shared.renderPositive(from: rawImage, stock: stock, ev: frame.exposureEV, warmth: frame.warmthWB) : FilmColorEngine.shared.renderOrangeNegative(from: rawImage))
-                .resizable().scaledToFill().frame(width: 76, height: 52).clipped()
-            HStack(spacing: 5) {
-                Text(String(format: "%02dA", frame.frameNumber)).font(.system(size: 6.5, weight: .bold, design: .monospaced)).foregroundColor(.orange)
-                ForEach(0..<2, id: \.self) { _ in RoundedRectangle(cornerRadius: 1).fill(Color(red: 0.96, green: 0.96, blue: 0.94)).frame(width: 8, height: 5) }
+                .resizable().scaledToFill().frame(width: 70, height: 48).clipped()
+            HStack(spacing: 4) {
+                Text(String(format: "%02dA", frame.frameNumber)).font(.system(size: 6, weight: .bold, design: .monospaced)).foregroundColor(.orange)
+                ForEach(0..<2, id: \.self) { _ in RoundedRectangle(cornerRadius: 1).fill(Color(red: 0.96, green: 0.96, blue: 0.94)).frame(width: 7, height: 4) }
             }
         }
-        .padding(4).background(Color.black).overlay(Rectangle().stroke(isSelected ? Color.orange : Color.clear, lineWidth: 2))
-    }
-}
-
-struct InteractiveScannerStage: View {
-    let negativeImage: UIImage
-    let positiveImage: UIImage
-    @Binding var scanProgress: Double
-    var body: some View {
-        GeometryReader { geo in
-            let width = geo.size.width
-            let height = geo.size.height
-            let scannerX = width * CGFloat(scanProgress)
-            ZStack(alignment: .leading) {
-                Image(uiImage: negativeImage).resizable().scaledToFit().frame(width: width, height: height)
-                Image(uiImage: positiveImage).resizable().scaledToFit().frame(width: width, height: height)
-                    .mask(HStack(spacing: 0) { Rectangle().frame(width: max(0, scannerX)); Spacer(minLength: 0) })
-                ZStack {
-                    Rectangle().fill(Color.cyan).frame(width: 3, height: height).shadow(color: .cyan, radius: 8)
-                    VStack {
-                        Spacer()
-                        HStack(spacing: 4) { Image(systemName: "viewfinder"); Text("扫描中").font(.system(size: 9, weight: .bold)) }
-                            .foregroundColor(.black).padding(.horizontal, 6).padding(.vertical, 4).background(Color.cyan).cornerRadius(6).padding(.bottom, 10)
-                    }
-                }
-                .offset(x: min(max(0, scannerX - 30), width - 60))
-            }
-            .background(Color(white: 0.95)).cornerRadius(10).contentShape(Rectangle())
-            .gesture(DragGesture(minimumDistance: 0).onChanged { value in
-                let ratio = min(max(Double(value.location.x / width), 0.0), 1.0)
-                if abs(ratio - scanProgress) > 0.025 { HapticManager.shared.playScannerStepperPulse() }
-                scanProgress = ratio
-            })
-        }
-        .frame(height: 220)
+        .padding(4).background(Color.black).overlay(Rectangle().stroke(selectedIndex ? Color.orange : Color.clear, lineWidth: 2))
     }
 }
 
