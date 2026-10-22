@@ -1219,7 +1219,7 @@ struct FilmRollSelectorSheet: View {
 
 // 阶段二：红光暗房
 struct DarkroomDevelopingView: View {
-    @ObservedObject vm: FilmCameraViewModel
+    @ObservedObject var vm: FilmCameraViewModel
     @State private var selectedWaitSeconds: Int = 60
     var body: some View {
         ZStack {
