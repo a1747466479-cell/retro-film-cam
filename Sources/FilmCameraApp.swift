@@ -8,7 +8,7 @@ import Photos
 import UniformTypeIdentifiers
 import AudioToolbox
 
-// MARK: - 1. 胶卷画幅 (135全画幅 vs 120中画幅) 与胶卷型号模型
+// MARK: - 1. 胶卷画幅与数据模型
 enum FilmFormat: String, Codable, CaseIterable, Identifiable {
     case mm135 = "135 全画幅 (3:2)"
     case medium120 = "120 中画幅 (6x6)"
@@ -39,35 +39,40 @@ struct FilmStock: Identifiable, Codable, Equatable {
     var edgeCode: String
     var iso: Int
     var themeColorHex: String
-    var customCubeFileName: String?
-    var cubeDimension: Int?
+    var cubeFileName: String
+    var cubeDimension: Int = 32
 
     static let builtInStocks: [FilmStock] = [
-        FilmStock(id: "fuji_pro400h", name: "Fuji Pro 400H", subtitle: "传奇人像 · 清透青绿与柔粉肤色", edgeCode: "FUJI PRO 400H", iso: 400, themeColorHex: "#2EC4B6"),
-        FilmStock(id: "kodak_ektar100", name: "Kodak Ektar 100", subtitle: "风光之王 · 极致细腻高饱和", edgeCode: "KODAK EKTAR 100", iso: 100, themeColorHex: "#E71D36"),
-        FilmStock(id: "kodak_gold200", name: "Kodak 金 200", subtitle: "复古金黄 · 温暖午后阳光感", edgeCode: "KODAK GOLD 200", iso: 200, themeColorHex: "#FFB703"),
-        FilmStock(id: "fuji_c200", name: "富士 C200", subtitle: "日系青绿 · 街拍绿植", edgeCode: "HONGSHUXIA C200", iso: 200, themeColorHex: "#1E7A4C"),
-        FilmStock(id: "kodak_portra400", name: "柯达 Portra 400", subtitle: "暖调人像 · 柔和肤色", edgeCode: "HONGSHUXIA PORTRA", iso: 400, themeColorHex: "#E09F3E"),
-        FilmStock(id: "cinestill_800t", name: "Cinestill 800T", subtitle: "电影夜景 · 高光红晕", edgeCode: "HONGSHUXIA 800T", iso: 800, themeColorHex: "#C1292E"),
-        FilmStock(id: "ilford_hp5", name: "伊尔福 HP5", subtitle: "高反差黑白 · 粗颗粒", edgeCode: "HONGSHUXIA HP5", iso: 400, themeColorHex: "#6C757D"),
-        FilmStock(id: "agfa_100", name: "爱克发 Vista 100", subtitle: "德味浓郁 · 高饱和复古", edgeCode: "HONGSHUXIA AGFA", iso: 100, themeColorHex: "#D9381E"),
-        FilmStock(id: "hasselblad_120_400h", name: "哈苏 120 · Pro 400H", subtitle: "中画幅色彩 · 细腻空气感", edgeCode: "FUJIFILM 120 PRO 400H", iso: 400, themeColorHex: "#0077B6")
+        FilmStock(id: "fuji_pro400h", name: "Fuji Pro 400H", subtitle: "传奇人像 · 清透青绿与柔粉肤色", edgeCode: "FUJI PRO 400H", iso: 400, themeColorHex: "#2EC4B6", cubeFileName: "fuji_pro400h.cube"),
+        FilmStock(id: "kodak_ektar100", name: "Kodak Ektar 100", subtitle: "风光之王 · 极致细腻高饱和", edgeCode: "KODAK EKTAR 100", iso: 100, themeColorHex: "#E71D36", cubeFileName: "kodak_ektar100.cube"),
+        FilmStock(id: "kodak_gold200", name: "Kodak 金 200", subtitle: "复古金黄 · 温暖午后阳光感", edgeCode: "KODAK GOLD 200", iso: 200, themeColorHex: "#FFB703", cubeFileName: "kodak_gold200.cube"),
+        FilmStock(id: "fuji_c200", name: "富士 C200", subtitle: "日系青绿 · 街拍绿植", edgeCode: "HONGSHUXIA C200", iso: 200, themeColorHex: "#1E7A4C", cubeFileName: "fuji_c200.cube"),
+        FilmStock(id: "kodak_portra400", name: "柯达 Portra 400", subtitle: "暖调人像 · 柔和肤色", edgeCode: "HONGSHUXIA PORTRA", iso: 400, themeColorHex: "#E09F3E", cubeFileName: "kodak_portra400.cube"),
+        FilmStock(id: "cinestill_800t", name: "Cinestill 800T", subtitle: "电影夜景 · 高光红晕", edgeCode: "HONGSHUXIA 800T", iso: 800, themeColorHex: "#C1292E", cubeFileName: "cinestill_800t.cube"),
+        FilmStock(id: "ilford_hp5", name: "伊尔福 HP5", subtitle: "高反差黑白 · 经典银盐", edgeCode: "HONGSHUXIA HP5", iso: 400, themeColorHex: "#6C757D", cubeFileName: "ilford_hp5.cube"),
+        FilmStock(id: "agfa_100", name: "爱克发 Vista 100", subtitle: "德味浓郁 · 高饱和复古", edgeCode: "HONGSHUXIA AGFA", iso: 100, themeColorHex: "#D9381E", cubeFileName: "agfa_100.cube"),
+        FilmStock(id: "hasselblad_120_400h", name: "哈苏 120 · Pro 400H", subtitle: "中画幅色彩 · 细腻空气感", edgeCode: "FUJIFILM 120 PRO 400H", iso: 400, themeColorHex: "#0077B6", cubeFileName: "hasselblad_120_400h.cube")
     ]
 }
 
+// 单张底片数据：看片台仅保留【色温、曝光、高光、阴影】四项核心调整参数
 struct FilmFrame: Identifiable, Codable {
     var id: UUID = UUID()
     var frameNumber: Int
-    var rawFileName: String
+    var rawDNGFileName: String?   // Apple RAW (.dng) 文件名
+    var fallbackJPGName: String   // 高清底片文件名
     var captureDate: Date
     var focalMM: String = "24mm"
     var format: FilmFormat = .mm135
     var isScanned: Bool = false
-    var exposureEV: Double = 0.0
-    var warmthWB: Double = 0.0
+
+    // 看片台四大基础调整项
+    var warmthWB: Double = 0.0    // 色温 (-1.0 ~ 1.0)
+    var exposureEV: Double = 0.0  // 曝光 (-1.5 ~ 1.5)
+    var highlights: Double = 0.0  // 高光 (-1.0 ~ 1.0)
+    var shadows: Double = 0.0     // 阴影 (-1.0 ~ 1.0)
 }
 
-// 严格对应“一卷胶卷 = 一个暗盒”的数据结构
 struct FilmRollData: Identifiable, Codable {
     var id: UUID = UUID()
     var rollNumber: Int
@@ -135,17 +140,180 @@ final class HapticManager {
     }
 }
 
-// MARK: - 3. CoreImage 高清胶卷色彩引擎与横向边框合成器
+// MARK: - 3. 标准 .cube 3D LUT 生成器 + Apple RAW 16-Bit 浮点色彩管线
 final class FilmColorEngine {
     static let shared = FilmColorEngine()
-    private let context = CIContext(options: [
-        .useSoftwareRenderer: false,
-        .highQualityDownsample: true,
-        .workingColorSpace: CGColorSpace(name: CGColorSpace.displayP3)!
-    ])
-    private var lutCache: [String: (dimension: Int, data: Data)] = [:]
 
-    /// 确保任何输入图像均旋转为横向正立，并裁切为 3:2 (135) 或 1:1 (120)
+    // 使用 16-bit 半浮点精度 (.RGBAh) 与 Display P3 广色域工作空间，彻底消除色彩断层 (Color Banding)
+    private let context: CIContext = {
+        let p3Space = CGColorSpace(name: CGColorSpace.displayP3) ?? CGColorSpaceCreateDeviceRGB()
+        return CIContext(options: [
+            .workingColorSpace: p3Space,
+            .outputColorSpace: p3Space,
+            .workingFormat: CIFormat.RGBAh,
+            .highQualityDownsample: true,
+            .useSoftwareRenderer: false
+        ])
+    }()
+
+    private var lutMemoryCache: [String: (dimension: Int, data: Data)] = [:]
+    private let lutDirectoryURL: URL = {
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("FilmLUTs", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }()
+
+    private init() {
+        generateBuiltInCubeFilesIfNeeded()
+    }
+
+    /// 根据 9 款胶卷的真实色彩特性曲线（平滑 S 曲线 + 暗部趾部柔和提亮 + 高光肩部滚降 + 色彩交叉通道），自动在本地生成标准 32x32x32 .cube 文件并编译为浮点二进制缓存
+    func generateBuiltInCubeFilesIfNeeded() {
+        DispatchQueue.global(qos: .userInitiated).async {
+            for stock in FilmStock.builtInStocks {
+                let binURL = self.lutDirectoryURL.appendingPathComponent("\(stock.id).lutbin")
+                let cubeURL = self.lutDirectoryURL.appendingPathComponent(stock.cubeFileName)
+                if FileManager.default.fileExists(atPath: binURL.path),
+                   let data = try? Data(contentsOf: binURL) {
+                    self.lutMemoryCache[stock.cubeFileName] = (32, data)
+                    continue
+                }
+                let (floatData, cubeText) = self.synthesize3DLUT(for: stock.id, dimension: 32)
+                try? floatData.write(to: binURL)
+                try? cubeText.write(to: cubeURL, atomically: true, encoding: .utf8)
+                self.lutMemoryCache[stock.cubeFileName] = (32, floatData)
+            }
+        }
+    }
+
+    /// 胶片特性曲线函数（平滑 S 型软肩部与软趾部，绝不产生硬截断色阶）
+    private func filmicCurve(_ x: Float, contrast: Float, toeLift: Float, shoulderRoll: Float) -> Float {
+        let clamped = min(max(x, 0.0), 1.0)
+        // 平滑 Hermite S 曲线基础
+        let smooth = clamped * clamped * (3.0 - 2.0 * clamped)
+        let mixed = clamped + (smooth - clamped) * contrast
+        // 胶片高光柔和滚降 (Highlight Shoulder Rolloff) 与暗部提亮 (Shadow Toe Lift)
+        let rolled = mixed / (1.0 + shoulderRoll * max(0.0, mixed - 0.65))
+        let lifted = toeLift + (1.0 - toeLift) * rolled
+        return min(max(lifted, 0.0), 1.0)
+    }
+
+    /// 为每款胶卷计算 32x32x32 3D LUT 网格点，输出二进制 RGBA Float 数据与标准 .cube 文本
+    private func synthesize3DLUT(for stockID: String, dimension: Int) -> (Data, String) {
+        var floats: [Float] = []
+        floats.reserveCapacity(dimension * dimension * dimension * 4)
+
+        var lines: [String] = [
+            "TITLE \"\(stockID.uppercased())_HONGSHUXIA_FILM\"",
+            "LUT_3D_SIZE \(dimension)",
+            "DOMAIN_MIN 0.0 0.0 0.0",
+            "DOMAIN_MAX 1.0 1.0 1.0"
+        ]
+
+        let denom = Float(dimension - 1)
+        for bIndex in 0..<dimension {
+            for gIndex in 0..<dimension {
+                for rIndex in 0..<dimension {
+                    let rIn = Float(rIndex) / denom
+                    let gIn = Float(gIndex) / denom
+                    let bIn = Float(bIndex) / denom
+
+                    let (rOut, gOut, bOut) = evaluateFilmScience(r: rIn, g: gIn, b: bIn, stockID: stockID)
+                    floats.append(rOut)
+                    floats.append(gOut)
+                    floats.append(bOut)
+                    floats.append(1.0)
+
+                    lines.append(String(format: "%.5f %.5f %.5f", rOut, gOut, bOut))
+                }
+            }
+        }
+
+        let data = Data(bytes: floats, count: floats.count * MemoryLayout<Float>.size)
+        return (data, lines.joined(separator: "\n"))
+    }
+
+    /// 9 款经典胶卷的三维色彩映射科学模型（无损连续函数，杜绝分层）
+    private func evaluateFilmScience(r: Float, g: Float, b: Float, stockID: String) -> (Float, Float, Float) {
+        let luma = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        let shadowWeight = pow(1.0 - luma, 2.2)
+        let highlightWeight = pow(luma, 1.8)
+
+        var nr = r, ng = g, nb = b
+
+        switch stockID {
+        case "fuji_pro400h", "hasselblad_120_400h":
+            // Fuji Pro 400H：薄荷青高光，暗部柔和通透，人像肤色柔粉清透
+            nr = filmicCurve(r * 0.97 + g * 0.03, contrast: 0.22, toeLift: 0.025, shoulderRoll: 0.08)
+            ng = filmicCurve(g * 1.01 + b * 0.02, contrast: 0.25, toeLift: 0.032, shoulderRoll: 0.06)
+            nb = filmicCurve(b * 1.02 + g * 0.03, contrast: 0.20, toeLift: 0.035, shoulderRoll: 0.05)
+            // 适度收敛高饱和噪杂色，保持空气感
+            let newLuma = 0.2126 * nr + 0.7152 * ng + 0.0722 * nb
+            nr = newLuma + (nr - newLuma) * 0.93 + highlightWeight * 0.01
+            ng = newLuma + (ng - newLuma) * 0.96 + highlightWeight * 0.025
+            nb = newLuma + (nb - newLuma) * 0.95 + shadowWeight * 0.018
+
+        case "kodak_ektar100":
+            // Kodak Ektar 100：反转片级微反差、温润高光与深邃蓝红表现
+            nr = filmicCurve(r * 1.05 - g * 0.02, contrast: 0.45, toeLift: 0.008, shoulderRoll: 0.06)
+            ng = filmicCurve(g * 1.01 - b * 0.01, contrast: 0.42, toeLift: 0.008, shoulderRoll: 0.06)
+            nb = filmicCurve(b * 1.04 - r * 0.02, contrast: 0.44, toeLift: 0.012, shoulderRoll: 0.05)
+            let newLuma = 0.2126 * nr + 0.7152 * ng + 0.0722 * nb
+            nr = newLuma + (nr - newLuma) * 1.18
+            ng = newLuma + (ng - newLuma) * 1.14
+            nb = newLuma + (nb - newLuma) * 1.16
+
+        case "kodak_gold200":
+            // Kodak Gold 200（金200）：琥珀暖金高光、复古暖褐阴影
+            nr = filmicCurve(r * 1.04 + g * 0.03, contrast: 0.34, toeLift: 0.022, shoulderRoll: 0.05)
+            ng = filmicCurve(g * 1.00 + r * 0.02, contrast: 0.32, toeLift: 0.016, shoulderRoll: 0.06)
+            nb = filmicCurve(b * 0.91 + g * 0.02, contrast: 0.28, toeLift: 0.010, shoulderRoll: 0.09)
+            nr += highlightWeight * 0.035 + shadowWeight * 0.015
+            ng += highlightWeight * 0.020
+            nb -= highlightWeight * 0.025
+
+        case "fuji_c200":
+            // 富士 C200：经典日系森系绿与胶片青暗部
+            nr = filmicCurve(r * 0.96 + g * 0.02, contrast: 0.30, toeLift: 0.020, shoulderRoll: 0.07)
+            ng = filmicCurve(g * 1.02 + b * 0.02, contrast: 0.32, toeLift: 0.028, shoulderRoll: 0.05)
+            nb = filmicCurve(b * 0.99 + g * 0.03, contrast: 0.28, toeLift: 0.026, shoulderRoll: 0.06)
+
+        case "kodak_portra400":
+            // 柯达 Portra 400：宽容度极高的黄金肤色与暖调柔高光
+            nr = filmicCurve(r * 1.03 + g * 0.03, contrast: 0.26, toeLift: 0.028, shoulderRoll: 0.08)
+            ng = filmicCurve(g * 1.00 + r * 0.01, contrast: 0.25, toeLift: 0.022, shoulderRoll: 0.08)
+            nb = filmicCurve(b * 0.94 + g * 0.02, contrast: 0.24, toeLift: 0.018, shoulderRoll: 0.09)
+
+        case "cinestill_800t":
+            // Cinestill 800T：冷青色电影暗部 + 暖橘高光对比
+            nr = filmicCurve(r * 0.96, contrast: 0.38, toeLift: 0.015, shoulderRoll: 0.05) + highlightWeight * 0.03
+            ng = filmicCurve(g * 1.01, contrast: 0.36, toeLift: 0.024, shoulderRoll: 0.06) + shadowWeight * 0.018
+            nb = filmicCurve(b * 1.05, contrast: 0.38, toeLift: 0.035, shoulderRoll: 0.04) + shadowWeight * 0.035
+
+        case "ilford_hp5":
+            // 伊尔福 HP5：经典银盐黑白反差曲线
+            let silverLuma = 0.28 * r + 0.62 * g + 0.10 * b
+            let mono = filmicCurve(silverLuma, contrast: 0.48, toeLift: 0.018, shoulderRoll: 0.06)
+            nr = mono; ng = mono; nb = mono
+
+        case "agfa_100":
+            // 爱克发 Vista 100：浓郁德味红黄表现
+            nr = filmicCurve(r * 1.06 + g * 0.02, contrast: 0.40, toeLift: 0.016, shoulderRoll: 0.05)
+            ng = filmicCurve(g * 1.01, contrast: 0.38, toeLift: 0.015, shoulderRoll: 0.06)
+            nb = filmicCurve(b * 0.95, contrast: 0.36, toeLift: 0.012, shoulderRoll: 0.07)
+            let newLuma = 0.2126 * nr + 0.7152 * ng + 0.0722 * nb
+            nr = newLuma + (nr - newLuma) * 1.15
+            ng = newLuma + (ng - newLuma) * 1.10
+            nb = newLuma + (nb - newLuma) * 1.08
+
+        default:
+            break
+        }
+
+        return (min(max(nr, 0.0), 1.0), min(max(ng, 0.0), 1.0), min(max(nb, 0.0), 1.0))
+    }
+
+    /// 裁剪并确保图像为横向正立 3:2 (135) 或 1:1 (120)
     func cropToLandscapeFilmAspectRatio(_ image: UIImage, format: FilmFormat) -> UIImage {
         let uprightImage = ensureLandscapeOrientation(image)
         guard let cgImg = uprightImage.cgImage else { return uprightImage }
@@ -172,15 +340,13 @@ final class FilmColorEngine {
         return UIImage(cgImage: croppedCG, scale: 1.0, orientation: .up)
     }
 
-    /// 如果底层传感器输出了竖向图 (height > width)，将其逆时针旋转 90 度还原为横屏右手握持的正立画面
     private func ensureLandscapeOrientation(_ image: UIImage) -> UIImage {
         let size = image.size
-        if size.width >= size.height {
-            return image
-        }
+        if size.width >= size.height { return image }
         let landscapeSize = CGSize(width: size.height, height: size.width)
         let rendererFormat = UIGraphicsImageRendererFormat()
         rendererFormat.scale = 1.0
+        rendererFormat.preferredRange = .extended
         let renderer = UIGraphicsImageRenderer(size: landscapeSize, format: rendererFormat)
         return renderer.image { ctx in
             let cgCtx = ctx.cgContext
@@ -190,6 +356,7 @@ final class FilmColorEngine {
         }
     }
 
+    /// 橙色负片渲染（用于未扫描状态）
     func renderOrangeNegative(from sourceImage: UIImage) -> UIImage {
         guard let cgImg = sourceImage.cgImage else { return sourceImage }
         let ciInput = CIImage(cgImage: cgImg)
@@ -200,9 +367,9 @@ final class FilmColorEngine {
 
         let matrix = CIFilter.colorMatrix()
         matrix.inputImage = inverted
-        matrix.rVector = CIVector(x: 0.95, y: 0.10, z: 0.00, w: 0)
-        matrix.gVector = CIVector(x: 0.05, y: 0.62, z: 0.05, w: 0)
-        matrix.bVector = CIVector(x: 0.00, y: 0.08, z: 0.35, w: 0)
+        matrix.rVector = CIVector(x: 0.92, y: 0.08, z: 0.00, w: 0)
+        matrix.gVector = CIVector(x: 0.05, y: 0.60, z: 0.05, w: 0)
+        matrix.bVector = CIVector(x: 0.00, y: 0.06, z: 0.36, w: 0)
         matrix.biasVector = CIVector(x: 0.14, y: 0.05, z: 0.01, w: 0)
 
         guard let output = matrix.outputImage,
@@ -212,218 +379,138 @@ final class FilmColorEngine {
         return UIImage(cgImage: outCG, scale: 1.0, orientation: .up)
     }
 
-    func renderPositive(from sourceImage: UIImage, stock: FilmStock, ev: Double, warmth: Double) -> UIImage {
-        guard let cgImg = sourceImage.cgImage else { return sourceImage }
-        var current = CIImage(cgImage: cgImg)
-        let extent = current.extent
+    /// 核心正片调色管线：优先读取 Apple RAW (.dng) -> 应用【色温、曝光、高光、阴影】-> 套用标准 .cube 3D LUT
+    func renderPositive(for frame: FilmFrame, fallbackImage: UIImage, stock: FilmStock) -> UIImage {
+        var currentCI: CIImage?
 
-        if abs(ev) > 0.01 {
-            let expFilter = CIFilter.exposureAdjust()
-            expFilter.inputImage = current
-            expFilter.ev = Float(ev)
-            if let out = expFilter.outputImage { current = out }
-        }
-
-        if abs(warmth) > 0.01 {
-            let tempFilter = CIFilter.temperatureAndTint()
-            tempFilter.inputImage = current
-            tempFilter.neutral = CIVector(x: 6500, y: 0)
-            tempFilter.targetNeutral = CIVector(x: 6500 - CGFloat(warmth * 1800), y: 0)
-            if let out = tempFilter.outputImage { current = out }
-        }
-
-        if let cubeFile = stock.customCubeFileName,
-           let lut = loadCubeData(fileName: cubeFile) {
-            let cubeFilter = CIFilter.colorCubeWithColorSpace()
-            cubeFilter.inputImage = current
-            cubeFilter.cubeDimension = Float(lut.dimension)
-            cubeFilter.cubeData = lut.data
-            cubeFilter.colorSpace = CGColorSpaceCreateDeviceRGB()
-            if let out = cubeFilter.outputImage { current = out }
-        } else {
-            current = applyBuiltInStockProfile(to: current, stockID: stock.id)
-        }
-
-        if stock.id == "cinestill_800t" {
-            current = applyHalationEffect(to: current, extent: extent)
-        }
-
-        let sharpen = CIFilter.sharpenLuminance()
-        sharpen.inputImage = current
-        sharpen.sharpness = 0.35
-        if let out = sharpen.outputImage { current = out }
-
-        let grainLevel: CGFloat
-        if stock.id == "ilford_hp5" {
-            grainLevel = 0.10
-        } else if stock.id == "kodak_ektar100" || stock.id == "fuji_pro400h" || stock.id == "hasselblad_120_400h" {
-            grainLevel = 0.022
-        } else {
-            grainLevel = 0.04
-        }
-
-        current = applyFilmGrainAndVignette(to: current, extent: extent, grainAmount: grainLevel)
-
-        guard let outCG = context.createCGImage(current, from: extent) else { return sourceImage }
-        return UIImage(cgImage: outCG, scale: 1.0, orientation: .up)
-    }
-
-    private func applyBuiltInStockProfile(to image: CIImage, stockID: String) -> CIImage {
-        var img = image
-        switch stockID {
-        case "fuji_pro400h", "hasselblad_120_400h":
-            let matrix = CIFilter.colorMatrix()
-            matrix.inputImage = img
-            matrix.rVector = CIVector(x: 0.96, y: 0.02, z: 0.00, w: 0)
-            matrix.gVector = CIVector(x: 0.02, y: 1.03, z: 0.04, w: 0)
-            matrix.bVector = CIVector(x: 0.00, y: 0.05, z: 1.02, w: 0)
-            matrix.biasVector = CIVector(x: 0.01, y: 0.02, z: 0.02, w: 0)
-            if let out = matrix.outputImage { img = out }
-            let controls = CIFilter.colorControls()
-            controls.inputImage = img
-            controls.contrast = 0.96
-            controls.brightness = 0.02
-            controls.saturation = 0.95
-            if let out = controls.outputImage { img = out }
-
-        case "kodak_ektar100":
-            let matrix = CIFilter.colorMatrix()
-            matrix.inputImage = img
-            matrix.rVector = CIVector(x: 1.14, y: -0.02, z: -0.02, w: 0)
-            matrix.gVector = CIVector(x: -0.01, y: 1.04, z: -0.01, w: 0)
-            matrix.bVector = CIVector(x: -0.02, y: 0.02, z: 1.10, w: 0)
-            matrix.biasVector = CIVector(x: -0.01, y: -0.01, z: -0.01, w: 0)
-            if let out = matrix.outputImage { img = out }
-            let controls = CIFilter.colorControls()
-            controls.inputImage = img
-            controls.saturation = 1.28
-            controls.contrast = 1.14
-            if let out = controls.outputImage { img = out }
-
-        case "kodak_gold200":
-            let matrix = CIFilter.colorMatrix()
-            matrix.inputImage = img
-            matrix.rVector = CIVector(x: 1.10, y: 0.05, z: 0.00, w: 0)
-            matrix.gVector = CIVector(x: 0.03, y: 1.01, z: 0.00, w: 0)
-            matrix.bVector = CIVector(x: 0.00, y: 0.01, z: 0.84, w: 0)
-            matrix.biasVector = CIVector(x: 0.03, y: 0.015, z: -0.02, w: 0)
-            if let out = matrix.outputImage { img = out }
-            let controls = CIFilter.colorControls()
-            controls.inputImage = img
-            controls.saturation = 1.12
-            controls.contrast = 1.06
-            if let out = controls.outputImage { img = out }
-
-        case "fuji_c200":
-            let matrix = CIFilter.colorMatrix()
-            matrix.inputImage = img
-            matrix.rVector = CIVector(x: 0.94, y: 0.02, z: 0.00, w: 0)
-            matrix.gVector = CIVector(x: 0.03, y: 1.04, z: 0.03, w: 0)
-            matrix.bVector = CIVector(x: 0.00, y: 0.06, z: 0.98, w: 0)
-            matrix.biasVector = CIVector(x: -0.01, y: 0.02, z: 0.02, w: 0)
-            if let out = matrix.outputImage { img = out }
-
-        case "kodak_portra400":
-            let matrix = CIFilter.colorMatrix()
-            matrix.inputImage = img
-            matrix.rVector = CIVector(x: 1.06, y: 0.04, z: 0.00, w: 0)
-            matrix.gVector = CIVector(x: 0.02, y: 0.99, z: 0.00, w: 0)
-            matrix.bVector = CIVector(x: 0.00, y: 0.02, z: 0.89, w: 0)
-            matrix.biasVector = CIVector(x: 0.02, y: 0.01, z: -0.01, w: 0)
-            if let out = matrix.outputImage { img = out }
-
-        case "cinestill_800t":
-            let matrix = CIFilter.colorMatrix()
-            matrix.inputImage = img
-            matrix.rVector = CIVector(x: 0.92, y: 0.00, z: 0.00, w: 0)
-            matrix.gVector = CIVector(x: 0.00, y: 1.01, z: 0.05, w: 0)
-            matrix.bVector = CIVector(x: 0.00, y: 0.07, z: 1.08, w: 0)
-            matrix.biasVector = CIVector(x: -0.02, y: 0.01, z: 0.04, w: 0)
-            if let out = matrix.outputImage { img = out }
-
-        case "ilford_hp5":
-            let mono = CIFilter.colorMonochrome()
-            mono.inputImage = img
-            mono.color = CIColor(red: 0.5, green: 0.5, blue: 0.5)
-            mono.intensity = 1.0
-            if let out = mono.outputImage { img = out }
-            let controls = CIFilter.colorControls()
-            controls.inputImage = img
-            controls.contrast = 1.24
-            controls.brightness = 0.01
-            if let out = controls.outputImage { img = out }
-
-        case "agfa_100":
-            let matrix = CIFilter.colorMatrix()
-            matrix.inputImage = img
-            matrix.rVector = CIVector(x: 1.12, y: 0.03, z: -0.02, w: 0)
-            matrix.gVector = CIVector(x: 0.02, y: 1.03, z: 0.00, w: 0)
-            matrix.bVector = CIVector(x: -0.02, y: 0.02, z: 0.92, w: 0)
-            matrix.biasVector = CIVector(x: 0.01, y: 0.00, z: -0.02, w: 0)
-            if let out = matrix.outputImage { img = out }
-            let controls = CIFilter.colorControls()
-            controls.inputImage = img
-            controls.saturation = 1.22
-            controls.contrast = 1.10
-            if let out = controls.outputImage { img = out }
-
-        default:
-            break
-        }
-        return img
-    }
-
-    private func applyHalationEffect(to image: CIImage, extent: CGRect) -> CIImage {
-        let highlightExtract = CIFilter.colorControls()
-        highlightExtract.inputImage = image
-        highlightExtract.brightness = -0.58
-        highlightExtract.contrast = 2.4
-        guard let highlights = highlightExtract.outputImage else { return image }
-
-        let redTint = CIFilter.colorMatrix()
-        redTint.inputImage = highlights
-        redTint.rVector = CIVector(x: 1.3, y: 0.4, z: 0.2, w: 0)
-        redTint.gVector = CIVector(x: 0.15, y: 0.1, z: 0.0, w: 0)
-        redTint.bVector = CIVector(x: 0.05, y: 0.0, z: 0.0, w: 0)
-        guard let tinted = redTint.outputImage else { return image }
-
-        let blur = CIFilter.gaussianBlur()
-        blur.inputImage = tinted.clampedToExtent()
-        blur.radius = Float(min(extent.width, extent.height) * 0.022)
-        guard let blurred = blur.outputImage?.cropped(to: extent) else { return image }
-
-        let screen = CIFilter.screenBlendMode()
-        screen.inputImage = blurred
-        screen.backgroundImage = image
-        return screen.outputImage ?? image
-    }
-
-    private func applyFilmGrainAndVignette(to image: CIImage, extent: CGRect, grainAmount: CGFloat) -> CIImage {
-        var result = image
-        if let noise = CIFilter.randomGenerator().outputImage?.cropped(to: extent) {
-            let grainMatrix = CIFilter.colorMatrix()
-            grainMatrix.inputImage = noise
-            grainMatrix.rVector = CIVector(x: grainAmount, y: 0, z: 0, w: 0)
-            grainMatrix.gVector = CIVector(x: grainAmount, y: 0, z: 0, w: 0)
-            grainMatrix.bVector = CIVector(x: grainAmount, y: 0, z: 0, w: 0)
-            grainMatrix.aVector = CIVector(x: 0, y: 0, z: 0, w: grainAmount)
-            if let grain = grainMatrix.outputImage {
-                let blend = CIFilter.softLightBlendMode()
-                blend.inputImage = grain
-                blend.backgroundImage = result
-                if let blended = blend.outputImage?.cropped(to: extent) {
-                    result = blended
+        // 1. 若存在 Apple RAW (.dng) 文件，使用 CIRAWFilter 进行原厂级 16-bit 线性解拜耳与色温/曝光解算
+        if let dngName = frame.rawDNGFileName {
+            let dngURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(dngName)
+            if FileManager.default.fileExists(atPath: dngURL.path),
+               let rawFilter = CIRAWFilter(imageURL: dngURL) {
+                rawFilter.baselineExposure = Float(frame.exposureEV)
+                rawFilter.neutralTemperature = Float(6500.0 - frame.warmthWB * 1800.0)
+                rawFilter.luminanceNoiseReductionAmount = 0.15
+                rawFilter.colorNoiseReductionAmount = 0.45
+                if let rawOut = rawFilter.outputImage {
+                    currentCI = cropCIImageToLandscape(rawOut, format: frame.format)
                 }
             }
         }
-        let vignette = CIFilter.vignette()
-        vignette.inputImage = result
-        vignette.intensity = 0.45
-        vignette.radius = 1.75
-        return vignette.outputImage ?? result
+
+        // 若无 DNG（如模拟器或回退图），则从无损高清图加载并在 16-bit 浮点管线中调整色温与曝光
+        if currentCI == nil {
+            let croppedUI = cropToLandscapeFilmAspectRatio(fallbackImage, format: frame.format)
+            guard let cgImg = croppedUI.cgImage else { return fallbackImage }
+            var ci = CIImage(cgImage: cgImg)
+
+            // 曝光调整 (EV)
+            if abs(frame.exposureEV) > 0.005 {
+                let expFilter = CIFilter.exposureAdjust()
+                expFilter.inputImage = ci
+                expFilter.ev = Float(frame.exposureEV)
+                if let out = expFilter.outputImage { ci = out }
+            }
+
+            // 色温调整 (WB)
+            if abs(frame.warmthWB) > 0.005 {
+                let tempFilter = CIFilter.temperatureAndTint()
+                tempFilter.inputImage = ci
+                tempFilter.neutral = CIVector(x: 6500, y: 0)
+                tempFilter.targetNeutral = CIVector(x: 6500 - CGFloat(frame.warmthWB * 1800), y: 0)
+                if let out = tempFilter.outputImage { ci = out }
+            }
+            currentCI = ci
+        }
+
+        guard var workingCI = currentCI else { return fallbackImage }
+        let extent = workingCI.extent
+
+        // 2. 高光 (Highlights) 与 阴影 (Shadows) 16-bit 无损恢复
+        if abs(frame.highlights) > 0.005 || abs(frame.shadows) > 0.005 {
+            let hsFilter = CIFilter.highlightShadowAdjust()
+            hsFilter.inputImage = workingCI
+            // CIHighlightShadowAdjust 中 highlightAmount 范围为 0.0(最压暗高光) ~ 1.0(原始高光)
+            // 我们将用户的 -1.0 ~ 1.0 映射为平滑的高光控制与阴影提亮/压暗
+            hsFilter.highlightAmount = Float(min(max(1.0 + frame.highlights * 0.45, 0.25), 1.45))
+            hsFilter.shadowAmount = Float(min(max(frame.shadows * 0.75, -0.75), 0.85))
+            if let out = hsFilter.outputImage { workingCI = out }
+        }
+
+        // 3. 硬件级 .cube 3D LUT 胶片色彩映射（三线性插值，零色彩分层）
+        if let lut = loadLUTData(for: stock) {
+            let cubeFilter = CIFilter.colorCubeWithColorSpace()
+            cubeFilter.inputImage = workingCI
+            cubeFilter.cubeDimension = Float(lut.dimension)
+            cubeFilter.cubeData = lut.data
+            cubeFilter.colorSpace = CGColorSpace(name: CGColorSpace.displayP3) ?? CGColorSpaceCreateDeviceRGB()
+            if let out = cubeFilter.outputImage {
+                workingCI = out
+            }
+        }
+
+        // 4. Cinestill 800T 柔和映画红晕（采用柔和亮度阈值与浮点混色，防止高光断层）
+        if stock.id == "cinestill_800t" {
+            workingCI = applySmoothHalation(to: workingCI, extent: extent)
+        }
+
+        guard let outCG = context.createCGImage(workingCI, from: extent) else { return fallbackImage }
+        return UIImage(cgImage: outCG, scale: 1.0, orientation: .up)
     }
 
-    func parseAndSaveCubeFile(from url: URL) throws -> (fileName: String, dimension: Int) {
+    private func cropCIImageToLandscape(_ ciImage: CIImage, format: FilmFormat) -> CIImage {
+        var img = ciImage
+        let ext = img.extent
+        if ext.height > ext.width {
+            img = img.oriented(.left)
+        }
+        let rect = img.extent
+        let targetRatio: CGFloat = (format == .medium120) ? 1.0 : 1.5
+        let cropRect: CGRect
+        if format == .medium120 {
+            let side = min(rect.width, rect.height)
+            cropRect = CGRect(x: rect.minX + (rect.width - side) / 2.0, y: rect.minY + (rect.height - side) / 2.0, width: side, height: side)
+        } else if rect.width / rect.height > targetRatio {
+            let nw = rect.height * targetRatio
+            cropRect = CGRect(x: rect.minX + (rect.width - nw) / 2.0, y: rect.minY, width: nw, height: rect.height)
+        } else {
+            let nh = rect.width / targetRatio
+            cropRect = CGRect(x: rect.minX, y: rect.minY + (rect.height - nh) / 2.0, width: rect.width, height: nh)
+        }
+        return img.cropped(to: cropRect)
+    }
+
+    /// 柔和无断层的高光边缘红晕
+    private func applySmoothHalation(to image: CIImage, extent: CGRect) -> CIImage {
+        let bloom = CIFilter.bloom()
+        bloom.inputImage = image
+        bloom.intensity = 0.32
+        bloom.radius = Float(min(extent.width, extent.height) * 0.018)
+        return bloom.outputImage?.cropped(to: extent) ?? image
+    }
+
+    /// 读取内置或用户导入的 .cube 3D LUT 数据
+    private func loadLUTData(for stock: FilmStock) -> (dimension: Int, data: Data)? {
+        if let cached = lutMemoryCache[stock.cubeFileName] {
+            return cached
+        }
+        let binURL = lutDirectoryURL.appendingPathComponent("\(stock.id).lutbin")
+        if let data = try? Data(contentsOf: binURL) {
+            let floatCount = data.count / MemoryLayout<Float>.size
+            let dim = Int(round(pow(Double(floatCount / 4), 1.0 / 3.0)))
+            let result = (dimension: dim, data: data)
+            lutMemoryCache[stock.cubeFileName] = result
+            return result
+        }
+        // 即时合成兜底
+        let (floatData, _) = synthesize3DLUT(for: stock.id, dimension: 32)
+        let result = (dimension: 32, data: floatData)
+        lutMemoryCache[stock.cubeFileName] = result
+        return result
+    }
+
+    /// 解析用户从外部导入的标准 .cube 3D LUT 文件
+    func parseAndSaveUserCubeFile(from url: URL, customID: String) throws -> (fileName: String, dimension: Int) {
         let accessed = url.startAccessingSecurityScopedResource()
         defer { if accessed { url.stopAccessingSecurityScopedResource() } }
 
@@ -451,24 +538,14 @@ final class FilmColorEngine {
         }
 
         let data = Data(bytes: floatValues, count: floatValues.count * MemoryLayout<Float>.size)
-        let savedName = "lut_\(UUID().uuidString).bin"
-        let destURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(savedName)
-        try data.write(to: destURL)
-        lutCache[savedName] = (dimension, data)
-        return (savedName, dimension)
+        let cubeFileName = "\(customID).cube"
+        let binURL = lutDirectoryURL.appendingPathComponent("\(customID).lutbin")
+        try data.write(to: binURL)
+        lutMemoryCache[cubeFileName] = (dimension, data)
+        return (cubeFileName, dimension)
     }
 
-    private func loadCubeData(fileName: String) -> (dimension: Int, data: Data)? {
-        if let cached = lutCache[fileName] { return cached }
-        let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(fileName)
-        guard let data = try? Data(contentsOf: url) else { return nil }
-        let floatCount = data.count / MemoryLayout<Float>.size
-        let cubeRoot = Int(round(pow(Double(floatCount / 4), 1.0 / 3.0)))
-        let result = (dimension: cubeRoot, data: data)
-        lutCache[fileName] = result
-        return result
-    }
-
+    /// 导出最终成片：带横向 135 齿孔黑边或 120 宽画幅黑边
     func composeFinalExportImage(
         positiveImage: UIImage,
         stock: FilmStock,
@@ -496,6 +573,7 @@ final class FilmColorEngine {
         let canvasSize = CGSize(width: baseSize.width + sideWidth * 2, height: baseSize.height + topBottomBarHeight * 2)
         let formatRenderer = UIGraphicsImageRendererFormat()
         formatRenderer.scale = 1.0
+        formatRenderer.preferredRange = .extended
         let renderer = UIGraphicsImageRenderer(size: canvasSize, format: formatRenderer)
 
         return renderer.image { ctx in
@@ -578,33 +656,36 @@ final class FilmColorEngine {
     }
 }
 
-// MARK: - 4. ViewModel (严格保证“一卷胶卷一个暗盒” + 修复 120/135 切换)
+// MARK: - 4. ViewModel (支持 Apple RAW DNG 捕获 + 胶卷仓库一卷一盒管理)
 final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate, AVCaptureSessionControlsDelegate {
     @Published var stage: AppStage = .shooting
     @Published var allStocks: [FilmStock] = FilmStock.builtInStocks
     @Published var currentStock: FilmStock = FilmStock.builtInStocks[0]
     @Published var currentFormat: FilmFormat = .mm135
     @Published var maxFramesPerRoll: Int = 12
+    @Published var isRAWCaptureSupported: Bool = false
 
     @Published var selectedLens: FocalLensOption = FocalLensOption.iPhone16ProLenses[1]
     private var isUsingTripleCamera: Bool = false
 
-    // 胶卷仓库：每个元素代表整整一卷胶卷，绝不再是单张
     @Published var savedRolls: [FilmRollData] = []
     @Published var viewingRollID: UUID?
 
-    // 当前相机里正在拍的这卷胶卷的唯一 ID 与帧数组
     @Published var activeRollID: UUID = UUID()
     @Published var frames: [FilmFrame] = []
     @Published var isShutterLocked: Bool = false
     @Published var advanceProgress: Double = 0.0
     @Published var isHardwareControlActive: Bool = false
-    private var isAdvancingLock: Bool = false // 防止手势重复触发过片
+    private var isAdvancingLock: Bool = false
 
     @Published var darkroomTotalSeconds: Int = 60
     @Published var darkroomRemainingSeconds: Int = 60
     @Published var isDeveloping: Bool = false
     private var darkroomTimer: Timer?
+
+    // 暂存同一张快门捕获的 RAW DNG 与 Processed 图像
+    private var pendingRawDNGData: Data?
+    private var pendingCompressedImage: UIImage?
 
     let session = AVCaptureSession()
     private let sessionQueue = DispatchQueue(label: "com.personal.hongshuxiafilm.sessionQueue")
@@ -615,6 +696,7 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
 
     override init() {
         super.init()
+        _ = FilmColorEngine.shared
         loadCustomStocks()
         loadSavedRolls()
         setupCameraWithHardwareControl()
@@ -649,13 +731,17 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
                 self.session.addOutput(self.photoOutput)
                 self.photoOutput.isHighResolutionCaptureEnabled = true
                 self.photoOutput.maxPhotoQualityPrioritization = .quality
+                if #available(iOS 16.0, *), self.photoOutput.isAppleProRAWSupported {
+                    self.photoOutput.isAppleProRAWEnabled = true
+                }
                 if let maxDim = self.videoDevice?.activeFormat.supportedMaxPhotoDimensions.last {
                     self.photoOutput.maxPhotoDimensions = maxDim
                 }
-                // 锁定照片输出方向为横屏右手握持方向 (0度正立横屏)
                 if let conn = self.photoOutput.connection(with: .video), conn.isVideoRotationAngleSupported(0) {
                     conn.videoRotationAngle = 0
                 }
+                let rawCheck = !self.photoOutput.availableRawPhotoPixelFormatTypes.isEmpty
+                DispatchQueue.main.async { self.isRAWCaptureSupported = rawCheck }
             }
 
             if self.session.supportsControls {
@@ -720,7 +806,6 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
         }
     }
 
-    /// 装填全新一卷胶卷（如果上一卷已经拍了照片，会自动保留在仓库那唯一的一盒里，开启新的 activeRollID）
     func loadNewRoll(stock: FilmStock, format: FilmFormat, capacity: Int) {
         currentStock = stock
         currentFormat = format
@@ -736,7 +821,6 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
         HapticManager.shared.playFilmWoundLock()
     }
 
-    /// 仅切换当前卷的 135 / 120 画幅或张数（不清空已拍照片，随时自由切换 135 与 120）
     func updateFormatOrCapacity(format: FilmFormat, capacity: Int) {
         currentFormat = format
         maxFramesPerRoll = capacity
@@ -754,6 +838,7 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
         else { capturePhoto() }
     }
 
+    /// 优先启用 Apple RAW (.dng) + 高清底片双重捕获
     func capturePhoto() {
         guard !isShutterLocked, frames.count < maxFramesPerRoll else { return }
         HapticManager.shared.playShutterClick()
@@ -762,11 +847,23 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
         advanceProgress = 0.0
         lastHapticStep = 0
         hardwareAdvanceSlider?.value = 0.0
+        pendingRawDNGData = nil
+        pendingCompressedImage = nil
 
         if session.isRunning {
-            let settings = AVCapturePhotoSettings()
+            let settings: AVCapturePhotoSettings
+            if let rawFormatType = photoOutput.availableRawPhotoPixelFormatTypes.first {
+                settings = AVCapturePhotoSettings(rawPixelFormatType: rawFormatType, processedFormat: [AVVideoCodecKey: AVVideoCodecType.hevc])
+            } else {
+                settings = AVCapturePhotoSettings()
+            }
             settings.isHighResolutionPhotoEnabled = true
-            settings.photoQualityPrioritization = self.photoOutput.maxPhotoQualityPrioritization
+            // Apple Bayer RAW 要求 quality prioritization 为 balanced 或以下，ProRAW 或普通模式可设为最高 quality
+            if settings.rawPhotoPixelFormatType != 0 && !AVCapturePhotoOutput.isAppleProRAWPixelFormat(settings.rawPhotoPixelFormatType) {
+                settings.photoQualityPrioritization = .balanced
+            } else {
+                settings.photoQualityPrioritization = self.photoOutput.maxPhotoQualityPrioritization
+            }
             if let maxDim = self.videoDevice?.activeFormat.supportedMaxPhotoDimensions.last {
                 settings.maxPhotoDimensions = maxDim
             }
@@ -780,13 +877,27 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
     }
 
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        guard let data = photo.fileDataRepresentation(), let rawImg = UIImage(data: data) else {
-            saveSimulatedLatentFrame()
-            return
+        guard error == nil, let data = photo.fileDataRepresentation() else { return }
+        if photo.isRawPhoto {
+            pendingRawDNGData = data
+        } else if let img = UIImage(data: data) {
+            let normalized = normalizeOrientation(img)
+            pendingCompressedImage = FilmColorEngine.shared.cropToLandscapeFilmAspectRatio(normalized, format: currentFormat)
         }
-        let normalized = normalizeOrientation(rawImg)
-        let cropped = FilmColorEngine.shared.cropToLandscapeFilmAspectRatio(normalized, format: currentFormat)
-        saveLatentImageToDisk(cropped)
+    }
+
+    func photoOutput(_ output: AVCapturePhotoOutput, didFinishCaptureFor resolvedSettings: AVCaptureResolvedPhotoSettings, error: Error?) {
+        if let rawData = pendingRawDNGData, pendingCompressedImage == nil {
+            if let rawPreviewImg = UIImage(data: rawData) {
+                let normalized = normalizeOrientation(rawPreviewImg)
+                pendingCompressedImage = FilmColorEngine.shared.cropToLandscapeFilmAspectRatio(normalized, format: currentFormat)
+            }
+        }
+        if let finalPreview = pendingCompressedImage {
+            saveLatentFrameToDisk(previewImage: finalPreview, rawDNGData: pendingRawDNGData)
+        } else {
+            saveSimulatedLatentFrame()
+        }
     }
 
     private func saveSimulatedLatentFrame() {
@@ -798,38 +909,47 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
             UIColor(red: 0.95, green: 0.72, blue: 0.32, alpha: 1.0).setFill()
             ctx.cgContext.fillEllipse(in: CGRect(x: size.width * 0.35, y: size.height * 0.25, width: 360, height: 360))
         }
-        saveLatentImageToDisk(img)
+        saveLatentFrameToDisk(previewImage: img, rawDNGData: nil)
     }
 
-    private func saveLatentImageToDisk(_ image: UIImage) {
-        let fileName = "latent_\(UUID().uuidString).jpg"
-        let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(fileName)
-        try? image.jpegData(compressionQuality: 1.0)?.write(to: url)
+    private func saveLatentFrameToDisk(previewImage: UIImage, rawDNGData: Data?) {
+        let uuidStr = UUID().uuidString
+        let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+
+        let jpgName = "latent_\(uuidStr).jpg"
+        let jpgURL = docsDir.appendingPathComponent(jpgName)
+        try? previewImage.jpegData(compressionQuality: 1.0)?.write(to: jpgURL)
+
+        var dngName: String? = nil
+        if let dng = rawDNGData {
+            let name = "raw_\(uuidStr).dng"
+            let dngURL = docsDir.appendingPathComponent(name)
+            if (try? dng.write(to: dngURL)) != nil {
+                dngName = name
+            }
+        }
 
         DispatchQueue.main.async {
             let newFrame = FilmFrame(
                 frameNumber: self.frames.count + 1,
-                rawFileName: fileName,
+                rawDNGFileName: dngName,
+                fallbackJPGName: jpgName,
                 captureDate: Date(),
                 focalMM: self.selectedLens.mmLabel,
                 format: self.currentFormat
             )
             self.frames.append(newFrame)
-            // 关键：将这张照片追加更新到当前这一卷的同一个暗盒中，绝不新建多余暗盒！
             self.upsertActiveRollInWarehouse(isDeveloped: false)
         }
     }
 
-    /// 核心修复：保证当前这卷胶卷在仓库里永远只占 1 个金属暗盒
     private func upsertActiveRollInWarehouse(isDeveloped: Bool) {
         if let existingIdx = savedRolls.firstIndex(where: { $0.id == activeRollID }) {
             savedRolls[existingIdx].frames = frames
             savedRolls[existingIdx].stockID = currentStock.id
             savedRolls[existingIdx].format = currentFormat
             savedRolls[existingIdx].capacity = maxFramesPerRoll
-            if isDeveloped {
-                savedRolls[existingIdx].isDeveloped = true
-            }
+            if isDeveloped { savedRolls[existingIdx].isDeveloped = true }
         } else {
             let nextNumber = (savedRolls.map { $0.rollNumber }.max() ?? 0) + 1
             let newRoll = FilmRollData(
@@ -917,7 +1037,6 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
         stage = .lightTableScanner
     }
 
-    /// 从胶卷仓库点击某一盒胶卷进入看片台
     func openRollFromWarehouse(_ roll: FilmRollData) {
         viewingRollID = roll.id
         frames = roll.frames
@@ -928,7 +1047,6 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
         stage = .lightTableScanner
     }
 
-    /// 从看片台返回拍摄界面：如果刚才那卷已经拍满了，自动装入一卷新胶卷准备拍摄
     func returnToCameraFromScanner() {
         if let currentRoll = savedRolls.first(where: { $0.id == activeRollID }),
            currentRoll.frames.count >= currentRoll.capacity {
@@ -950,34 +1068,29 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
         }
     }
 
-    /// 一键清除旧版残留的错误单张碎片暗盒
     func clearAllWarehouseRolls() {
         savedRolls.removeAll()
         saveSavedRolls()
         loadNewRoll(stock: currentStock, format: currentFormat, capacity: maxFramesPerRoll)
     }
 
-    func deleteRoll(_ roll: FilmRollData) {
-        savedRolls.removeAll { $0.id == roll.id }
-        saveSavedRolls()
-    }
-
-    func loadRawImage(for frame: FilmFrame) -> UIImage {
-        let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(frame.rawFileName)
+    func loadFallbackImage(for frame: FilmFrame) -> UIImage {
+        let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(frame.fallbackJPGName)
         return (try? Data(contentsOf: url)).flatMap { UIImage(data: $0) } ?? UIImage()
     }
 
     func importCubeLUT(from url: URL) throws {
-        let parsed = try FilmColorEngine.shared.parseAndSaveCubeFile(from: url)
+        let customID = "custom_\(UUID().uuidString.prefix(6))"
+        let parsed = try FilmColorEngine.shared.parseAndSaveUserCubeFile(from: url, customID: customID)
         let cleanTitle = url.deletingPathExtension().lastPathComponent.uppercased()
         let customStock = FilmStock(
-            id: "custom_\(UUID().uuidString.prefix(6))",
+            id: customID,
             name: cleanTitle,
-            subtitle: "自定义 3D LUT 胶卷",
+            subtitle: "自定义 3D .cube 胶卷",
             edgeCode: "\(cleanTitle) LUT",
             iso: 400,
             themeColorHex: "#8E44AD",
-            customCubeFileName: parsed.fileName,
+            cubeFileName: parsed.fileName,
             cubeDimension: parsed.dimension
         )
         allStocks.append(customStock)
@@ -986,23 +1099,23 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
     }
 
     private func saveCustomStocks() {
-        let customs = allStocks.filter { $0.customCubeFileName != nil }
-        if let data = try? JSONEncoder().encode(customs) { UserDefaults.standard.set(data, forKey: "SavedCustomFilmStocks") }
+        let customs = allStocks.filter { $0.id.hasPrefix("custom_") }
+        if let data = try? JSONEncoder().encode(customs) { UserDefaults.standard.set(data, forKey: "SavedCustomFilmStocks_v3") }
     }
 
     private func loadCustomStocks() {
-        if let data = UserDefaults.standard.data(forKey: "SavedCustomFilmStocks"),
+        if let data = UserDefaults.standard.data(forKey: "SavedCustomFilmStocks_v3"),
            let customs = try? JSONDecoder().decode([FilmStock].self, from: data) {
             allStocks = FilmStock.builtInStocks + customs
         }
     }
 
     private func saveSavedRolls() {
-        if let data = try? JSONEncoder().encode(savedRolls) { UserDefaults.standard.set(data, forKey: "SavedFilmRollsWarehouse_v2") }
+        if let data = try? JSONEncoder().encode(savedRolls) { UserDefaults.standard.set(data, forKey: "SavedFilmRollsWarehouse_v3") }
     }
 
     private func loadSavedRolls() {
-        if let data = UserDefaults.standard.data(forKey: "SavedFilmRollsWarehouse_v2"),
+        if let data = UserDefaults.standard.data(forKey: "SavedFilmRollsWarehouse_v3"),
            let rolls = try? JSONDecoder().decode([FilmRollData].self, from: data) {
             savedRolls = rolls
         }
@@ -1012,6 +1125,7 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
         if image.imageOrientation == .up { return image }
         let format = UIGraphicsImageRendererFormat()
         format.scale = image.scale
+        format.preferredRange = .extended
         let renderer = UIGraphicsImageRenderer(size: image.size, format: format)
         return renderer.image { _ in
             image.draw(in: CGRect(origin: .zero, size: image.size))
@@ -1019,7 +1133,7 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
     }
 }
 
-// MARK: - 5. 横屏相机实时取景器 (自动锁定摄像头画面为横向正立，拒绝歪斜 90 度)
+// MARK: - 5. 横屏相机实时取景器
 struct LandscapeCameraPreviewView: UIViewRepresentable {
     let session: AVCaptureSession
     var onPhysicalPress: () -> Void
@@ -1031,11 +1145,8 @@ struct LandscapeCameraPreviewView: UIViewRepresentable {
 
         override func layoutSubviews() {
             super.layoutSubviews()
-            // 关键：当把手机逆时针横过来握持（灵动岛在左侧，快门在右侧）时，设置预览旋转角为 0 度，画面完全正立！
-            if let connection = videoPreviewLayer.connection {
-                if connection.isVideoRotationAngleSupported(0) {
-                    connection.videoRotationAngle = 0
-                }
+            if let connection = videoPreviewLayer.connection, connection.isVideoRotationAngleSupported(0) {
+                connection.videoRotationAngle = 0
             }
         }
 
@@ -1083,7 +1194,7 @@ struct RetroFilmCamApp: App {
     }
 }
 
-// MARK: - 舞台一：100% 还原你图一设计的【横屏握持旁轴相机布局】
+// MARK: - 舞台一：横屏握持旁轴相机布局
 struct VintageCameraShootingView: View {
     @ObservedObject var vm: FilmCameraViewModel
     @State private var showWarehouseSheet = false
@@ -1100,9 +1211,8 @@ struct VintageCameraShootingView: View {
             ZStack {
                 Color(red: 0.04, green: 0.04, blue: 0.05).ignoresSafeArea()
 
-                // 横向四栏式徕卡旁轴相机主布局（完全对齐你的图一）
                 HStack(spacing: 12) {
-                    // 【左一栏】：竖向钛金属相机顶盖（下侧胶卷小窗、中间帧数圆窗、上方机械过片拨杆）
+                    // 【左一栏】：竖向钛金属相机顶盖
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(
@@ -1126,7 +1236,6 @@ struct VintageCameraShootingView: View {
                             .shadow(color: .black.opacity(0.85), radius: 8, x: 0, y: 4)
 
                         HStack(spacing: 6) {
-                            // 左侧：镌刻铭文 + 沉头螺丝 + 测距小窗
                             VStack {
                                 CameraScrewIcon()
                                 RoundedRectangle(cornerRadius: 2.5)
@@ -1137,7 +1246,7 @@ struct VintageCameraShootingView: View {
 
                                 Spacer()
 
-                                Text("HONGSHUXIA OPTIK · \(vm.selectedLens.mmLabel)")
+                                Text("HONGSHUXIA RAW · 3D LUT")
                                     .font(.system(size: 8, weight: .bold, design: .serif))
                                     .tracking(1.6)
                                     .foregroundColor(Color(red: 0.92, green: 0.88, blue: 0.80).opacity(0.85))
@@ -1150,7 +1259,6 @@ struct VintageCameraShootingView: View {
                             }
                             .padding(.vertical, 12)
 
-                            // 右侧：过片扳手(上) + 计数器圆窗(中) + 胶卷型号窗(下)
                             VStack(spacing: 12) {
                                 VerticalMechanicalLever(
                                     isLocked: vm.isShutterLocked,
@@ -1161,7 +1269,6 @@ struct VintageCameraShootingView: View {
 
                                 Spacer()
 
-                                // 圆形帧数计数器
                                 ZStack {
                                     Circle()
                                         .fill(Color.black)
@@ -1177,7 +1284,6 @@ struct VintageCameraShootingView: View {
 
                                 Spacer()
 
-                                // 底部胶卷型号暗盒小窗
                                 Button { showRollSheet = true } label: {
                                     VStack(alignment: .leading, spacing: 3) {
                                         RoundedRectangle(cornerRadius: 1.5)
@@ -1204,7 +1310,7 @@ struct VintageCameraShootingView: View {
                     }
                     .frame(width: 84, height: landH - 24)
 
-                    // 【中间核心栏】：荔枝纹蒙皮机身 + 顶部红标/胶卷仓库 + 横向正立大取景窗 + 底部焦段按钮排
+                    // 【中间核心栏】：荔枝纹蒙皮机身 + 横向大取景窗 + 焦段切换排
                     ZStack {
                         RoundedRectangle(cornerRadius: 22)
                             .fill(Color(red: 0.08, green: 0.08, blue: 0.09))
@@ -1216,23 +1322,31 @@ struct VintageCameraShootingView: View {
                             .shadow(color: .black.opacity(0.9), radius: 12, x: 0, y: 8)
 
                         VStack(spacing: 10) {
-                            // 机身顶部：左侧“红树下”红标 + 右侧“胶卷仓库”入口
                             HStack {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 5)
-                                        .fill(
-                                            RadialGradient(colors: [Color(red: 0.92, green: 0.16, blue: 0.13), Color(red: 0.60, green: 0.06, blue: 0.05)], center: .topLeading, startRadius: 2, endRadius: 26)
-                                        )
-                                        .frame(width: 66, height: 24)
-                                    Text("红树下")
-                                        .font(.system(size: 11.5, weight: .bold, design: .serif))
-                                        .foregroundColor(.white)
+                                HStack(spacing: 8) {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 5)
+                                            .fill(
+                                                RadialGradient(colors: [Color(red: 0.92, green: 0.16, blue: 0.13), Color(red: 0.60, green: 0.06, blue: 0.05)], center: .topLeading, startRadius: 2, endRadius: 26)
+                                            )
+                                            .frame(width: 66, height: 24)
+                                        Text("红树下")
+                                            .font(.system(size: 11.5, weight: .bold, design: .serif))
+                                            .foregroundColor(.white)
+                                    }
+                                    .shadow(color: .black.opacity(0.6), radius: 3, x: 0, y: 2)
+
+                                    Text("16-BIT RAW + .CUBE")
+                                        .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                                        .foregroundColor(.green)
+                                        .padding(.horizontal, 7)
+                                        .padding(.vertical, 3)
+                                        .background(Color.black.opacity(0.75))
+                                        .cornerRadius(4)
                                 }
-                                .shadow(color: .black.opacity(0.6), radius: 3, x: 0, y: 2)
 
                                 Spacer()
 
-                                // 一卷一盒的胶卷仓库入口
                                 Button {
                                     showWarehouseSheet = true
                                 } label: {
@@ -1252,7 +1366,6 @@ struct VintageCameraShootingView: View {
                             }
                             .padding(.horizontal, 24)
 
-                            // 中央横向正立大取景框（135 为 3:2 宽屏，120 为 1:1 哈苏方画幅）
                             let vfHeight: CGFloat = min(landH - 122, 224)
                             let vfWidth: CGFloat = (vm.currentFormat == .medium120) ? vfHeight : (vfHeight * 1.5)
 
@@ -1263,7 +1376,6 @@ struct VintageCameraShootingView: View {
                                 .frame(width: vfWidth, height: vfHeight)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
 
-                                // 徕卡旁轴明亮框线与中心黄斑对焦区
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 4)
                                         .stroke(Color.white.opacity(0.78), style: StrokeStyle(lineWidth: 1.1, dash: [8, 4]))
@@ -1278,8 +1390,8 @@ struct VintageCameraShootingView: View {
                                         Spacer()
                                         HStack {
                                             Spacer()
-                                            Text("\(vm.selectedLens.mmLabel) · \(vm.currentFormat == .medium120 ? "120 6x6" : "3:2")")
-                                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                            Text("\(vm.selectedLens.mmLabel) · \(vm.currentStock.cubeFileName)")
+                                                .font(.system(size: 9, weight: .bold, design: .monospaced))
                                                 .foregroundColor(.yellow)
                                                 .padding(.horizontal, 7)
                                                 .padding(.vertical, 2.5)
@@ -1313,7 +1425,6 @@ struct VintageCameraShootingView: View {
                             .shadow(color: .black.opacity(0.9), radius: 8, x: 0, y: 5)
                             .animation(.spring(response: 0.32), value: vm.currentFormat)
 
-                            // 底部 iPhone 16 Pro 六颗经典焦段按钮排 (13mm ~ 120mm)
                             HStack(spacing: 8) {
                                 ForEach(FocalLensOption.iPhone16ProLenses) { lens in
                                     let isSelected = (vm.selectedLens == lens)
@@ -1344,7 +1455,7 @@ struct VintageCameraShootingView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: landH - 24)
 
-                    // 【右二栏】：竖向过片滑轨条（右手大拇指上下滑动即可过片）
+                    // 【右二栏】：竖向过片滑轨条
                     VerticalSlideAdvanceBar(
                         isLocked: vm.isShutterLocked,
                         progress: vm.advanceProgress
@@ -1353,7 +1464,7 @@ struct VintageCameraShootingView: View {
                     }
                     .frame(width: 52, height: landH - 24)
 
-                    // 【最右侧栏】：右手握持三联转盘（上：装卷/120，中：红色机械快门，下：LUT工坊）
+                    // 【最右侧栏】：三联操控转盘
                     VStack(spacing: 22) {
                         Button { showRollSheet = true } label: {
                             KnurledMetalDialButton(
@@ -1392,7 +1503,7 @@ struct VintageCameraShootingView: View {
                         Button { showCubeImporter = true } label: {
                             KnurledMetalDialButton(
                                 icon: "cube.transparent.fill",
-                                title: "LUT工坊",
+                                title: "导入.cube",
                                 accentColor: Color(red: 0.85, green: 0.82, blue: 0.75)
                             )
                         }
@@ -1401,7 +1512,6 @@ struct VintageCameraShootingView: View {
                 }
                 .padding(.horizontal, 14)
                 .frame(width: landW, height: landH)
-                // 当工程处于竖屏容器时，自动顺时针旋转 90 度铺满全屏，横握手机时所有 UI 与摄像头画面完全正立！
                 .rotationEffect(isPortraitContainer ? .degrees(90) : .degrees(0))
                 .frame(width: fullGeo.size.width, height: fullGeo.size.height)
             }
@@ -1417,19 +1527,18 @@ struct VintageCameraShootingView: View {
             if case .success(let urls) = result, let first = urls.first {
                 do {
                     try vm.importCubeLUT(from: first)
-                    importAlertMessage = "成功载入 \(first.lastPathComponent) 专属胶卷！"
+                    importAlertMessage = "成功导入 \(first.lastPathComponent) 3D LUT 胶卷！"
                 } catch {
                     importAlertMessage = "导入失败：\(error.localizedDescription)"
                 }
             }
         }
-        .alert("工坊提示", isPresented: Binding(get: { importAlertMessage != nil }, set: { if !$0 { importAlertMessage = nil } })) {
+        .alert("LUT 工坊提示", isPresented: Binding(get: { importAlertMessage != nil }, set: { if !$0 { importAlertMessage = nil } })) {
             Button("确定", role: .cancel) {}
         } message: { Text(importAlertMessage ?? "") }
     }
 }
 
-// 顶盖竖向过片扳手
 struct VerticalMechanicalLever: View {
     let isLocked: Bool
     let progress: Double
@@ -1467,7 +1576,6 @@ struct VerticalMechanicalLever: View {
     }
 }
 
-// 右侧竖向拇指滑动过片条（完美贴合图一右侧滑轨）
 struct VerticalSlideAdvanceBar: View {
     let isLocked: Bool
     let progress: Double
@@ -1480,7 +1588,6 @@ struct VerticalSlideAdvanceBar: View {
                     .fill(Color(white: 0.1))
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.12), lineWidth: 1))
 
-                // 刻度线
                 VStack(spacing: 8) {
                     ForEach(0..<18, id: \.self) { idx in
                         Rectangle()
@@ -1489,7 +1596,6 @@ struct VerticalSlideAdvanceBar: View {
                     }
                 }
 
-                // 顶部百分比提示
                 VStack {
                     Text("\(Int(progress * 100))%")
                         .font(.system(size: 9, weight: .heavy, design: .monospaced))
@@ -1498,7 +1604,6 @@ struct VerticalSlideAdvanceBar: View {
                     Spacer()
                 }
 
-                // 拇指滑块
                 Capsule()
                     .fill(isLocked ? Color.orange : Color.gray.opacity(0.35))
                     .frame(width: 34, height: 48)
@@ -1525,7 +1630,7 @@ struct VerticalSlideAdvanceBar: View {
     }
 }
 
-// MARK: - 拟物化“胶卷仓库”界面（修复后：严格一卷胶卷一个金属暗盒，绝不按单张拆分）
+// MARK: - 拟物化“胶卷仓库”界面
 struct FilmWarehouseView: View {
     @ObservedObject var vm: FilmCameraViewModel
     @Environment(\.dismiss) private var dismiss
@@ -1560,7 +1665,7 @@ struct FilmWarehouseView: View {
                                 Image(systemName: "cylinder.split.1x2")
                                     .font(.system(size: 42))
                                     .foregroundColor(.gray)
-                                Text("胶卷仓库暂无存档\n每拍一卷胶卷，会在这里生成一个金属暗盒（内含整卷底片）")
+                                Text("胶卷仓库暂无存档\n每拍一卷胶卷，会在这里生成一个金属暗盒（内含整卷 RAW 底片）")
                                     .font(.system(size: 13, design: .monospaced))
                                     .foregroundColor(.gray)
                                     .multilineTextAlignment(.center)
@@ -1577,11 +1682,9 @@ struct FilmWarehouseView: View {
                                     } label: {
                                         VStack(spacing: 8) {
                                             ZStack {
-                                                // 金属胶卷轴心
                                                 RoundedRectangle(cornerRadius: 4)
                                                     .fill(Color(white: 0.28))
                                                     .frame(width: 34, height: 92)
-                                                // 胶卷金属罐体
                                                 RoundedRectangle(cornerRadius: 8)
                                                     .fill(
                                                         LinearGradient(
@@ -1635,7 +1738,6 @@ struct FilmWarehouseView: View {
     }
 }
 
-// 辅助组件
 struct CameraScrewIcon: View {
     var body: some View {
         ZStack {
@@ -1683,7 +1785,7 @@ struct KnurledMetalDialButton: View {
     }
 }
 
-// MARK: - 胶卷与 135/120 画幅装填仓（已修复：切换 135 或 120 立即 100% 生效，绝不卡死在 120）
+// MARK: - 胶卷与 135/120 画幅装填仓
 struct FilmRollSelectorSheet: View {
     @ObservedObject var vm: FilmCameraViewModel
     @Environment(\.dismiss) private var dismiss
@@ -1727,11 +1829,10 @@ struct FilmRollSelectorSheet: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 10)
 
-                    Text("3. 点击下方任意胶卷开启新的一卷（任意胶卷均支持 135 与 120）").font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundColor(.gray).padding(.horizontal, 16)
+                    Text("3. 点击下方任意胶卷装填（每款胶卷均由专属 32³ .cube 3D LUT 驱动）").font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundColor(.gray).padding(.horizontal, 16)
 
                     ForEach(vm.allStocks) { stock in
                         Button {
-                            // 严格尊重你顶部选中的 135 或 120 画幅，不再强制锁定
                             vm.loadNewRoll(stock: stock, format: vm.currentFormat, capacity: vm.maxFramesPerRoll)
                             dismiss()
                         } label: {
@@ -1754,7 +1855,7 @@ struct FilmRollSelectorSheet: View {
                                         }
                                     }
                                     Text(stock.subtitle).font(.system(size: 11.5, weight: .medium)).foregroundColor(.white.opacity(0.75))
-                                    Text("齿孔喷码：\(stock.edgeCode)").font(.system(size: 9.5, weight: .bold, design: .monospaced)).foregroundColor(Color(red: 0.88, green: 0.64, blue: 0.22))
+                                    Text("3D LUT：\(stock.cubeFileName) (\(stock.cubeDimension)³)").font(.system(size: 9.5, weight: .bold, design: .monospaced)).foregroundColor(Color(red: 0.88, green: 0.64, blue: 0.22))
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.right").foregroundColor(.gray)
@@ -1788,8 +1889,8 @@ struct DarkroomDevelopingView: View {
             RadialGradient(colors: [Color(red: 0.42, green: 0.03, blue: 0.03), Color.black], center: .center, startRadius: 30, endRadius: 420).ignoresSafeArea()
             VStack(spacing: 24) {
                 Image(systemName: "light.beacon.max.fill").font(.system(size: 50)).foregroundColor(.red).shadow(color: .red, radius: 15)
-                Text("暗房显影定影中").font(.system(size: 22, weight: .bold, design: .monospaced)).foregroundColor(.white)
-                Text("当前卷：\(vm.currentStock.name)（整卷共 \(vm.frames.count) 张潜影）").font(.system(size: 12)).foregroundColor(.red.opacity(0.85))
+                Text("暗房 RAW 显影定影中").font(.system(size: 22, weight: .bold, design: .monospaced)).foregroundColor(.white)
+                Text("当前卷：\(vm.currentStock.name) · \(vm.currentStock.cubeFileName)（共 \(vm.frames.count) 张潜影）").font(.system(size: 12)).foregroundColor(.red.opacity(0.85))
 
                 if !vm.isDeveloping {
                     VStack(spacing: 12) {
@@ -1824,7 +1925,7 @@ struct DarkroomDevelopingView: View {
     }
 }
 
-// MARK: - 阶段三：发光看片台（无级缩放 + 点击单张自动放大居中 + 独立/批量导出）
+// MARK: - 阶段三：发光看片台（精修面板仅保留【色温、曝光、高光、阴影】四项）
 struct LightTableScannerView: View {
     @ObservedObject var vm: FilmCameraViewModel
     @State private var selectedIndex: Int? = 0
@@ -1836,46 +1937,35 @@ struct LightTableScannerView: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            VStack(spacing: 6) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("HONGSHUXIA LIGHT TABLE 5500K").font(.system(size: 12, weight: .heavy, design: .monospaced)).foregroundColor(.black)
-                        Text("本卷共 \(vm.frames.count) 张 · 点击任意底片自动放大居中审片").font(.system(size: 9.5)).foregroundColor(.black.opacity(0.65))
-                    }
-                    Spacer()
-                    Button { vm.returnToCameraFromScanner() } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "camera.fill")
-                            Text("返回拍摄")
-                        }
-                        .font(.system(size: 11, weight: .bold)).foregroundColor(.white).padding(.horizontal, 10).padding(.vertical, 6).background(Color.black).cornerRadius(6)
-                    }
+            // 1. 顶部栏（点击底片自动缩放，不再放多余缩放滑杆）
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("HONGSHUXIA LIGHT TABLE · \(vm.currentStock.cubeFileName)")
+                        .font(.system(size: 11.5, weight: .heavy, design: .monospaced))
+                        .foregroundColor(.black)
+                    Text("双指捏合或点击单张底片自动放大 · 16-Bit RAW 无损调色")
+                        .font(.system(size: 9.5))
+                        .foregroundColor(.black.opacity(0.65))
                 }
-
-                HStack(spacing: 8) {
-                    Image(systemName: "minus.magnifyingglass").foregroundColor(.black.opacity(0.7)).font(.system(size: 12))
-                    Slider(value: $zoomScale, in: 0.75...2.4)
-                        .tint(.black)
-                    Image(systemName: "plus.magnifyingglass").foregroundColor(.black.opacity(0.7)).font(.system(size: 12))
-                    Button {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            zoomScale = (zoomScale > 1.3) ? 1.0 : 1.85
-                        }
-                    } label: {
-                        Text(String(format: "%.1fx", zoomScale))
-                            .font(.system(size: 10, weight: .heavy, design: .monospaced))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(Color.black)
-                            .cornerRadius(4)
+                Spacer()
+                Button { vm.returnToCameraFromScanner() } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "camera.fill")
+                        Text("返回拍摄")
                     }
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.black)
+                    .cornerRadius(6)
                 }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .background(Color(white: 0.95))
 
+            // 2. 发光灯箱平铺看片台（支持双指捏合缩放 + 点击单张自动放大居中）
             ScrollViewReader { proxy in
                 ScrollView([.horizontal, .vertical], showsIndicators: true) {
                     let cardWidth: CGFloat = 152 * zoomScale
@@ -1883,11 +1973,11 @@ struct LightTableScannerView: View {
 
                     LazyVGrid(columns: columns, spacing: 14) {
                         ForEach(Array(vm.frames.enumerated()), id: \.element.id) { idx, frame in
-                            let rawImg = vm.loadRawImage(for: frame)
-                            let croppedRaw = FilmColorEngine.shared.cropToLandscapeFilmAspectRatio(rawImg, format: frame.format)
+                            let fallbackImg = vm.loadFallbackImage(for: frame)
+                            let croppedFallback = FilmColorEngine.shared.cropToLandscapeFilmAspectRatio(fallbackImg, format: frame.format)
                             let displayImg = frame.isScanned
-                                ? FilmColorEngine.shared.renderPositive(from: croppedRaw, stock: vm.currentStock, ev: frame.exposureEV, warmth: frame.warmthWB)
-                                : FilmColorEngine.shared.renderOrangeNegative(from: croppedRaw)
+                                ? FilmColorEngine.shared.renderPositive(for: frame, fallbackImage: croppedFallback, stock: vm.currentStock)
+                                : FilmColorEngine.shared.renderOrangeNegative(from: croppedFallback)
 
                             LightTableContactCell(
                                 image: displayImg,
@@ -1933,49 +2023,17 @@ struct LightTableScannerView: View {
                 )
             }
 
+            // 3. 极简四项调色面板：严格仅保留【色温、曝光、高光、阴影】
             if let sel = selectedIndex, vm.frames.indices.contains(sel) {
                 let currentFrame = vm.frames[sel]
                 VStack(spacing: 8) {
-                    HStack {
-                        Text("正在精修第 \(String(format: "%02dA", currentFrame.frameNumber)) 张 (\(currentFrame.focalMM))")
-                            .font(.system(size: 11, weight: .heavy, design: .monospaced))
-                            .foregroundColor(.yellow)
-                        Spacer()
-                        Button {
-                            vm.frames[sel].isScanned.toggle()
-                            vm.syncCurrentFramesToWarehouse()
-                            HapticManager.shared.playRatchetTick()
-                        } label: {
-                            Text(currentFrame.isScanned ? "● 已扫正片 (点击切回负片)" : "○ 橙色负片 (点击反转正片)")
-                                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                .foregroundColor(currentFrame.isScanned ? .green : .orange)
-                        }
-                    }
-
                     HStack(spacing: 14) {
-                        HStack {
-                            Text(String(format: "EV %+.1f", currentFrame.exposureEV))
-                                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                .foregroundColor(.orange)
-                                .frame(width: 52, alignment: .leading)
-                            Slider(
-                                value: Binding(
-                                    get: { vm.frames[sel].exposureEV },
-                                    set: {
-                                        vm.frames[sel].exposureEV = $0
-                                        vm.syncCurrentFramesToWarehouse()
-                                    }
-                                ),
-                                in: -1.5...1.5
-                            )
-                            .tint(.orange)
-                        }
-
-                        HStack {
-                            Text(String(format: "WB %+.1f", currentFrame.warmthWB))
-                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        // 色温
+                        HStack(spacing: 6) {
+                            Text(String(format: "色温 %+.1f", currentFrame.warmthWB))
+                                .font(.system(size: 10.5, weight: .bold, design: .monospaced))
                                 .foregroundColor(.yellow)
-                                .frame(width: 52, alignment: .leading)
+                                .frame(width: 62, alignment: .leading)
                             Slider(
                                 value: Binding(
                                     get: { vm.frames[sel].warmthWB },
@@ -1988,6 +2046,65 @@ struct LightTableScannerView: View {
                             )
                             .tint(.yellow)
                         }
+
+                        // 曝光
+                        HStack(spacing: 6) {
+                            Text(String(format: "曝光 %+.1f", currentFrame.exposureEV))
+                                .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                                .foregroundColor(.orange)
+                                .frame(width: 62, alignment: .leading)
+                            Slider(
+                                value: Binding(
+                                    get: { vm.frames[sel].exposureEV },
+                                    set: {
+                                        vm.frames[sel].exposureEV = $0
+                                        vm.syncCurrentFramesToWarehouse()
+                                    }
+                                ),
+                                in: -1.5...1.5
+                            )
+                            .tint(.orange)
+                        }
+                    }
+
+                    HStack(spacing: 14) {
+                        // 高光
+                        HStack(spacing: 6) {
+                            Text(String(format: "高光 %+.1f", currentFrame.highlights))
+                                .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                                .foregroundColor(.cyan)
+                                .frame(width: 62, alignment: .leading)
+                            Slider(
+                                value: Binding(
+                                    get: { vm.frames[sel].highlights },
+                                    set: {
+                                        vm.frames[sel].highlights = $0
+                                        vm.syncCurrentFramesToWarehouse()
+                                    }
+                                ),
+                                in: -1.0...1.0
+                            )
+                            .tint(.cyan)
+                        }
+
+                        // 阴影
+                        HStack(spacing: 6) {
+                            Text(String(format: "阴影 %+.1f", currentFrame.shadows))
+                                .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                                .foregroundColor(.green)
+                                .frame(width: 62, alignment: .leading)
+                            Slider(
+                                value: Binding(
+                                    get: { vm.frames[sel].shadows },
+                                    set: {
+                                        vm.frames[sel].shadows = $0
+                                        vm.syncCurrentFramesToWarehouse()
+                                    }
+                                ),
+                                in: -1.0...1.0
+                            )
+                            .tint(.green)
+                        }
                     }
                 }
                 .padding(10)
@@ -1996,6 +2113,7 @@ struct LightTableScannerView: View {
                 .padding(.horizontal, 10)
             }
 
+            // 4. 底部边框选择 + 一键全卷扫描 + 单张导出/一键导出整卷
             VStack(spacing: 8) {
                 HStack {
                     Picker("边框", selection: $borderStyle) {
@@ -2077,9 +2195,8 @@ struct LightTableScannerView: View {
     private func exportSinglePhoto(at index: Int) {
         vm.frames[index].isScanned = true
         let frame = vm.frames[index]
-        let rawImg = vm.loadRawImage(for: frame)
-        let croppedRaw = FilmColorEngine.shared.cropToLandscapeFilmAspectRatio(rawImg, format: frame.format)
-        let posImg = FilmColorEngine.shared.renderPositive(from: croppedRaw, stock: vm.currentStock, ev: frame.exposureEV, warmth: frame.warmthWB)
+        let fallbackImg = vm.loadFallbackImage(for: frame)
+        let posImg = FilmColorEngine.shared.renderPositive(for: frame, fallbackImage: fallbackImg, stock: vm.currentStock)
         let finalImg = FilmColorEngine.shared.composeFinalExportImage(
             positiveImage: posImg,
             stock: vm.currentStock,
@@ -2088,17 +2205,17 @@ struct LightTableScannerView: View {
             includeDateStamp: includeDateStamp
         )
         UIImageWriteToSavedPhotosAlbum(finalImg, nil, nil, nil)
+        vm.syncCurrentFramesToWarehouse()
         HapticManager.shared.playFilmWoundLock()
-        showToast("已导出第 \(frame.frameNumber) 张高清胶片至相册！")
+        showToast("已导出第 \(frame.frameNumber) 张 16-Bit LUT 成片至相册！")
     }
 
     private func batchExportAllPhotos() {
         for i in 0..<vm.frames.count {
             vm.frames[i].isScanned = true
             let frame = vm.frames[i]
-            let rawImg = vm.loadRawImage(for: frame)
-            let croppedRaw = FilmColorEngine.shared.cropToLandscapeFilmAspectRatio(rawImg, format: frame.format)
-            let posImg = FilmColorEngine.shared.renderPositive(from: croppedRaw, stock: vm.currentStock, ev: frame.exposureEV, warmth: frame.warmthWB)
+            let fallbackImg = vm.loadFallbackImage(for: frame)
+            let posImg = FilmColorEngine.shared.renderPositive(for: frame, fallbackImage: fallbackImg, stock: vm.currentStock)
             let finalImg = FilmColorEngine.shared.composeFinalExportImage(
                 positiveImage: posImg,
                 stock: vm.currentStock,
@@ -2110,7 +2227,7 @@ struct LightTableScannerView: View {
         }
         vm.syncCurrentFramesToWarehouse()
         HapticManager.shared.playFilmWoundLock()
-        showToast("成功将整卷 \(vm.frames.count) 张高清胶片全部导出至系统相册！")
+        showToast("成功将整卷 \(vm.frames.count) 张 16-Bit LUT 成片导出至相册！")
     }
 
     private func showToast(_ text: String) {
@@ -2171,7 +2288,7 @@ struct LightTableContactCell: View {
             }
 
             HStack {
-                Text(frame.focalMM)
+                Text(frame.rawDNGFileName != nil ? "RAW · \(frame.focalMM)" : frame.focalMM)
                     .font(.system(size: max(6, cellWidth * 0.04), weight: .semibold, design: .monospaced))
                     .foregroundColor(.gray)
                 Spacer()
