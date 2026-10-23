@@ -10,8 +10,8 @@ import AudioToolbox
 
 // MARK: - 1. 胶卷画幅 (135全画幅 vs 120中画幅) 与胶卷型号模型
 enum FilmFormat: String, Codable, CaseIterable, Identifiable {
-    case mm135 = "135 全画幅 (3:2 横向齿孔)"
-    case medium120 = "120 中画幅 (6x6 哈苏方画幅)"
+    case mm135 = "135 全画幅 (3:2)"
+    case medium120 = "120 中画幅 (6x6)"
     var id: String { rawValue }
 }
 
@@ -19,7 +19,6 @@ struct FocalLensOption: Identifiable, Equatable {
     let id: String
     let mmLabel: String
     let subLabel: String
-    // 对应 iPhone 16 Pro builtInTripleCamera 的硬件/光学变焦倍数 (0.5x 基准为 1.0, 1x 主摄为 2.0, 5x 长焦为 10.0)
     let tripleCameraZoomFactor: CGFloat
     let singleCameraZoomFactor: CGFloat
 
@@ -40,20 +39,19 @@ struct FilmStock: Identifiable, Codable, Equatable {
     var edgeCode: String
     var iso: Int
     var themeColorHex: String
-    var defaultFormat: FilmFormat = .mm135
     var customCubeFileName: String?
     var cubeDimension: Int?
 
     static let builtInStocks: [FilmStock] = [
-        FilmStock(id: "fuji_pro400h", name: "Fuji Pro 400H", subtitle: "传奇人像 · 清透青绿与柔粉肤色", edgeCode: "FUJI PRO 400H", iso: 400, themeColorHex: "#2EC4B6", defaultFormat: .mm135),
-        FilmStock(id: "kodak_ektar100", name: "Kodak Ektar 100", subtitle: "风光之王 · 极致细腻高饱和", edgeCode: "KODAK EKTAR 100", iso: 100, themeColorHex: "#E71D36", defaultFormat: .mm135),
-        FilmStock(id: "kodak_gold200", name: "Kodak 金 200", subtitle: "复古金黄 · 温暖午后阳光感", edgeCode: "KODAK GOLD 200", iso: 200, themeColorHex: "#FFB703", defaultFormat: .mm135),
-        FilmStock(id: "fuji_c200", name: "富士 C200", subtitle: "日系青绿 · 街拍绿植", edgeCode: "HONGSHUXIA C200", iso: 200, themeColorHex: "#1E7A4C", defaultFormat: .mm135),
-        FilmStock(id: "kodak_portra400", name: "柯达 Portra 400", subtitle: "暖调人像 · 柔和肤色", edgeCode: "HONGSHUXIA PORTRA", iso: 400, themeColorHex: "#E09F3E", defaultFormat: .mm135),
-        FilmStock(id: "cinestill_800t", name: "Cinestill 800T", subtitle: "电影夜景 · 高光红晕", edgeCode: "HONGSHUXIA 800T", iso: 800, themeColorHex: "#C1292E", defaultFormat: .mm135),
-        FilmStock(id: "ilford_hp5", name: "伊尔福 HP5", subtitle: "高反差黑白 · 粗颗粒", edgeCode: "HONGSHUXIA HP5", iso: 400, themeColorHex: "#6C757D", defaultFormat: .mm135),
-        FilmStock(id: "agfa_100", name: "爱克发 Vista 100", subtitle: "德味浓郁 · 高饱和复古", edgeCode: "HONGSHUXIA AGFA", iso: 100, themeColorHex: "#D9381E", defaultFormat: .mm135),
-        FilmStock(id: "hasselblad_120_400h", name: "120 中画幅 · Pro 400H", subtitle: "6x6 哈苏方画幅 · 细腻空气感", edgeCode: "FUJIFILM 120 PRO 400H", iso: 400, themeColorHex: "#0077B6", defaultFormat: .medium120)
+        FilmStock(id: "fuji_pro400h", name: "Fuji Pro 400H", subtitle: "传奇人像 · 清透青绿与柔粉肤色", edgeCode: "FUJI PRO 400H", iso: 400, themeColorHex: "#2EC4B6"),
+        FilmStock(id: "kodak_ektar100", name: "Kodak Ektar 100", subtitle: "风光之王 · 极致细腻高饱和", edgeCode: "KODAK EKTAR 100", iso: 100, themeColorHex: "#E71D36"),
+        FilmStock(id: "kodak_gold200", name: "Kodak 金 200", subtitle: "复古金黄 · 温暖午后阳光感", edgeCode: "KODAK GOLD 200", iso: 200, themeColorHex: "#FFB703"),
+        FilmStock(id: "fuji_c200", name: "富士 C200", subtitle: "日系青绿 · 街拍绿植", edgeCode: "HONGSHUXIA C200", iso: 200, themeColorHex: "#1E7A4C"),
+        FilmStock(id: "kodak_portra400", name: "柯达 Portra 400", subtitle: "暖调人像 · 柔和肤色", edgeCode: "HONGSHUXIA PORTRA", iso: 400, themeColorHex: "#E09F3E"),
+        FilmStock(id: "cinestill_800t", name: "Cinestill 800T", subtitle: "电影夜景 · 高光红晕", edgeCode: "HONGSHUXIA 800T", iso: 800, themeColorHex: "#C1292E"),
+        FilmStock(id: "ilford_hp5", name: "伊尔福 HP5", subtitle: "高反差黑白 · 粗颗粒", edgeCode: "HONGSHUXIA HP5", iso: 400, themeColorHex: "#6C757D"),
+        FilmStock(id: "agfa_100", name: "爱克发 Vista 100", subtitle: "德味浓郁 · 高饱和复古", edgeCode: "HONGSHUXIA AGFA", iso: 100, themeColorHex: "#D9381E"),
+        FilmStock(id: "hasselblad_120_400h", name: "哈苏 120 · Pro 400H", subtitle: "中画幅色彩 · 细腻空气感", edgeCode: "FUJIFILM 120 PRO 400H", iso: 400, themeColorHex: "#0077B6")
     ]
 }
 
@@ -69,8 +67,10 @@ struct FilmFrame: Identifiable, Codable {
     var warmthWB: Double = 0.0
 }
 
+// 严格对应“一卷胶卷 = 一个暗盒”的数据结构
 struct FilmRollData: Identifiable, Codable {
     var id: UUID = UUID()
+    var rollNumber: Int
     var stockID: String
     var format: FilmFormat = .mm135
     var capacity: Int
@@ -145,16 +145,16 @@ final class FilmColorEngine {
     ])
     private var lutCache: [String: (dimension: Int, data: Data)] = [:]
 
-    /// 将相机拍出的照片裁剪为标准横向 3:2 (135胶卷) 或 1:1 (120中画幅)，彻底解决竖条变形问题
-    func cropToFilmAspectRatio(_ image: UIImage, format: FilmFormat) -> UIImage {
-        guard let cgImg = image.cgImage else { return image }
+    /// 确保任何输入图像均旋转为横向正立，并裁切为 3:2 (135) 或 1:1 (120)
+    func cropToLandscapeFilmAspectRatio(_ image: UIImage, format: FilmFormat) -> UIImage {
+        let uprightImage = ensureLandscapeOrientation(image)
+        guard let cgImg = uprightImage.cgImage else { return uprightImage }
         let width = CGFloat(cgImg.width)
         let height = CGFloat(cgImg.height)
 
         let targetRatio: CGFloat = (format == .medium120) ? 1.0 : (3.0 / 2.0)
-        var cropRect: CGRect
+        let cropRect: CGRect
 
-        // 如果是竖着拿手机拍的 (height > width)，在 135 模式下从中心裁出横向 3:2 构图（和取景框所见完全一致）
         if format == .medium120 {
             let side = min(width, height)
             cropRect = CGRect(x: (width - side) / 2.0, y: (height - side) / 2.0, width: side, height: side)
@@ -168,8 +168,26 @@ final class FilmColorEngine {
             }
         }
 
-        guard let croppedCG = cgImg.cropping(to: cropRect) else { return image }
-        return UIImage(cgImage: croppedCG, scale: image.scale, orientation: .up)
+        guard let croppedCG = cgImg.cropping(to: cropRect) else { return uprightImage }
+        return UIImage(cgImage: croppedCG, scale: 1.0, orientation: .up)
+    }
+
+    /// 如果底层传感器输出了竖向图 (height > width)，将其逆时针旋转 90 度还原为横屏右手握持的正立画面
+    private func ensureLandscapeOrientation(_ image: UIImage) -> UIImage {
+        let size = image.size
+        if size.width >= size.height {
+            return image
+        }
+        let landscapeSize = CGSize(width: size.height, height: size.width)
+        let rendererFormat = UIGraphicsImageRendererFormat()
+        rendererFormat.scale = 1.0
+        let renderer = UIGraphicsImageRenderer(size: landscapeSize, format: rendererFormat)
+        return renderer.image { ctx in
+            let cgCtx = ctx.cgContext
+            cgCtx.translateBy(x: landscapeSize.width / 2.0, y: landscapeSize.height / 2.0)
+            cgCtx.rotate(by: -.pi / 2.0)
+            image.draw(in: CGRect(x: -size.width / 2.0, y: -size.height / 2.0, width: size.width, height: size.height))
+        }
     }
 
     func renderOrangeNegative(from sourceImage: UIImage) -> UIImage {
@@ -191,7 +209,7 @@ final class FilmColorEngine {
               let outCG = context.createCGImage(output, from: ciInput.extent) else {
             return sourceImage
         }
-        return UIImage(cgImage: outCG, scale: sourceImage.scale, orientation: .up)
+        return UIImage(cgImage: outCG, scale: 1.0, orientation: .up)
     }
 
     func renderPositive(from sourceImage: UIImage, stock: FilmStock, ev: Double, warmth: Double) -> UIImage {
@@ -230,7 +248,6 @@ final class FilmColorEngine {
             current = applyHalationEffect(to: current, extent: extent)
         }
 
-        // 保持高清晰度：降低噪点对细节的破坏，同时增加胶片光学微锐化
         let sharpen = CIFilter.sharpenLuminance()
         sharpen.inputImage = current
         sharpen.sharpness = 0.35
@@ -238,24 +255,23 @@ final class FilmColorEngine {
 
         let grainLevel: CGFloat
         if stock.id == "ilford_hp5" {
-            grainLevel = 0.11
+            grainLevel = 0.10
         } else if stock.id == "kodak_ektar100" || stock.id == "fuji_pro400h" || stock.id == "hasselblad_120_400h" {
-            grainLevel = 0.025 // Ektar 100 与 Pro 400H 极其细腻
+            grainLevel = 0.022
         } else {
-            grainLevel = 0.045
+            grainLevel = 0.04
         }
 
         current = applyFilmGrainAndVignette(to: current, extent: extent, grainAmount: grainLevel)
 
         guard let outCG = context.createCGImage(current, from: extent) else { return sourceImage }
-        return UIImage(cgImage: outCG, scale: sourceImage.scale, orientation: .up)
+        return UIImage(cgImage: outCG, scale: 1.0, orientation: .up)
     }
 
     private func applyBuiltInStockProfile(to image: CIImage, stockID: String) -> CIImage {
         var img = image
         switch stockID {
         case "fuji_pro400h", "hasselblad_120_400h":
-            // Fuji Pro 400H：清透空气感，高光偏薄荷青，阴影柔润，肤色白皙通透
             let matrix = CIFilter.colorMatrix()
             matrix.inputImage = img
             matrix.rVector = CIVector(x: 0.96, y: 0.02, z: 0.00, w: 0)
@@ -271,7 +287,6 @@ final class FilmColorEngine {
             if let out = controls.outputImage { img = out }
 
         case "kodak_ektar100":
-            // Kodak Ektar 100：高反差、极具冲击力的红蓝高饱和风光色彩
             let matrix = CIFilter.colorMatrix()
             matrix.inputImage = img
             matrix.rVector = CIVector(x: 1.14, y: -0.02, z: -0.02, w: 0)
@@ -286,7 +301,6 @@ final class FilmColorEngine {
             if let out = controls.outputImage { img = out }
 
         case "kodak_gold200":
-            // Kodak Gold 200（金200）：浓郁暖金黄高光、怀旧复古琥珀暗部
             let matrix = CIFilter.colorMatrix()
             matrix.inputImage = img
             matrix.rVector = CIVector(x: 1.10, y: 0.05, z: 0.00, w: 0)
@@ -404,7 +418,7 @@ final class FilmColorEngine {
         }
         let vignette = CIFilter.vignette()
         vignette.inputImage = result
-        vignette.intensity = 0.48
+        vignette.intensity = 0.45
         vignette.radius = 1.75
         return vignette.outputImage ?? result
     }
@@ -455,7 +469,6 @@ final class FilmColorEngine {
         return result
     }
 
-    /// 导出合成器：135画幅严格按照图五生成【横向 3:2 + 上下各 8 个圆角矩形齿孔 + 金色喷码】；120画幅生成【6x6 哈苏无齿孔宽黑边】
     func composeFinalExportImage(
         positiveImage: UIImage,
         stock: FilmStock,
@@ -463,7 +476,7 @@ final class FilmColorEngine {
         borderStyle: ExportBorderStyle,
         includeDateStamp: Bool
     ) -> UIImage {
-        let croppedPhoto = cropToFilmAspectRatio(positiveImage, format: frame.format)
+        let croppedPhoto = cropToLandscapeFilmAspectRatio(positiveImage, format: frame.format)
         let baseSize = croppedPhoto.size
         let hasBorder = (borderStyle == .sprocket35mm)
 
@@ -482,7 +495,7 @@ final class FilmColorEngine {
 
         let canvasSize = CGSize(width: baseSize.width + sideWidth * 2, height: baseSize.height + topBottomBarHeight * 2)
         let formatRenderer = UIGraphicsImageRendererFormat()
-        formatRenderer.scale = 1.0 // 保持物理像素 1:1 无损输出
+        formatRenderer.scale = 1.0
         let renderer = UIGraphicsImageRenderer(size: canvasSize, format: formatRenderer)
 
         return renderer.image { ctx in
@@ -499,7 +512,6 @@ final class FilmColorEngine {
                 ]
 
                 if frame.format == .mm135 {
-                    // 严格复刻参考图五：上下各 8 颗标准 35mm 圆角白齿孔，齿孔上方与下方居中印金色帧号 (如 30)
                     let holeCount = 8
                     let holeWidth = canvasSize.width * 0.058
                     let holeHeight = topBottomBarHeight * 0.44
@@ -515,7 +527,6 @@ final class FilmColorEngine {
                         UIBezierPath(roundedRect: bottomHoleRect, cornerRadius: holeWidth * 0.22).fill()
                     }
 
-                    // 顶部左：胶卷边缘喷码；顶部中：金色帧数；顶部右：▶ 帧数A
                     let edgeStr = "\(stock.edgeCode)  \(frame.focalMM)" as NSString
                     edgeStr.draw(at: CGPoint(x: sideWidth, y: topBottomBarHeight * 0.08), withAttributes: goldAttrs)
 
@@ -525,12 +536,10 @@ final class FilmColorEngine {
                     let rightTopStr = String(format: "▶ %02dA", frame.frameNumber) as NSString
                     rightTopStr.draw(at: CGPoint(x: canvasSize.width - sideWidth - fontSize * 4.5, y: topBottomBarHeight * 0.08), withAttributes: goldAttrs)
 
-                    // 底部中：金色帧数；底部右：ISO 编码
                     centerNumStr.draw(at: CGPoint(x: canvasSize.width * 0.48, y: canvasSize.height - topBottomBarHeight * 0.30), withAttributes: goldAttrs)
                     let isoStr = "\(stock.iso)" as NSString
                     isoStr.draw(at: CGPoint(x: canvasSize.width - sideWidth - fontSize * 2.5, y: canvasSize.height - topBottomBarHeight * 0.30), withAttributes: goldAttrs)
                 } else {
-                    // 120 中画幅边框：无齿孔，上下印有 120 专属胶卷喷码与 6x6 画幅标记
                     let topText = "\(stock.edgeCode)  ·  120 MEDIUM FORMAT 6x6" as NSString
                     topText.draw(at: CGPoint(x: sideWidth, y: topBottomBarHeight * 0.32), withAttributes: goldAttrs)
 
@@ -569,7 +578,7 @@ final class FilmColorEngine {
     }
 }
 
-// MARK: - 4. ViewModel (集成 iPhone 16 Pro 三摄焦段切换 + 最高画质输出)
+// MARK: - 4. ViewModel (严格保证“一卷胶卷一个暗盒” + 修复 120/135 切换)
 final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate, AVCaptureSessionControlsDelegate {
     @Published var stage: AppStage = .shooting
     @Published var allStocks: [FilmStock] = FilmStock.builtInStocks
@@ -577,17 +586,20 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
     @Published var currentFormat: FilmFormat = .mm135
     @Published var maxFramesPerRoll: Int = 12
 
-    // iPhone 16 Pro 镜头焦段控制
-    @Published var selectedLens: FocalLensOption = FocalLensOption.iPhone16ProLenses[1] // 默认 24mm 1x 主摄
+    @Published var selectedLens: FocalLensOption = FocalLensOption.iPhone16ProLenses[1]
     private var isUsingTripleCamera: Bool = false
 
+    // 胶卷仓库：每个元素代表整整一卷胶卷，绝不再是单张
     @Published var savedRolls: [FilmRollData] = []
-    @Published var currentActiveRollIndex: Int = 0
+    @Published var viewingRollID: UUID?
 
+    // 当前相机里正在拍的这卷胶卷的唯一 ID 与帧数组
+    @Published var activeRollID: UUID = UUID()
     @Published var frames: [FilmFrame] = []
     @Published var isShutterLocked: Bool = false
     @Published var advanceProgress: Double = 0.0
     @Published var isHardwareControlActive: Bool = false
+    private var isAdvancingLock: Bool = false // 防止手势重复触发过片
 
     @Published var darkroomTotalSeconds: Int = 60
     @Published var darkroomRemainingSeconds: Int = 60
@@ -614,7 +626,6 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
             self.session.beginConfiguration()
             self.session.sessionPreset = .photo
 
-            // 优先启用 iPhone 16 Pro 的三摄融合镜头 (0.5x 超广 + 1x 主摄 + 5x 长焦无缝切换)
             let device: AVCaptureDevice?
             if let triple = AVCaptureDevice.default(.builtInTripleCamera, for: .video, position: .back) {
                 device = triple
@@ -636,11 +647,14 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
 
             if self.session.canAddOutput(self.photoOutput) {
                 self.session.addOutput(self.photoOutput)
-                // 开启最高物理分辨率与最高清晰度输出
                 self.photoOutput.isHighResolutionCaptureEnabled = true
                 self.photoOutput.maxPhotoQualityPrioritization = .quality
                 if let maxDim = self.videoDevice?.activeFormat.supportedMaxPhotoDimensions.last {
                     self.photoOutput.maxPhotoDimensions = maxDim
+                }
+                // 锁定照片输出方向为横屏右手握持方向 (0度正立横屏)
+                if let conn = self.photoOutput.connection(with: .video), conn.isVideoRotationAngleSupported(0) {
+                    conn.videoRotationAngle = 0
                 }
             }
 
@@ -662,13 +676,10 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
 
             self.session.commitConfiguration()
             self.session.startRunning()
-
-            // 默认切换到 24mm 1x 主摄焦段
             self.applyZoomFactor(for: self.selectedLens, animated: false)
         }
     }
 
-    /// 切换 iPhone 16 Pro 光学镜头与经典人文焦段
     func selectLens(_ lens: FocalLensOption) {
         selectedLens = lens
         HapticManager.shared.playRatchetTick(intensity: 0.85, sharpness: 0.9)
@@ -709,16 +720,32 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
         }
     }
 
+    /// 装填全新一卷胶卷（如果上一卷已经拍了照片，会自动保留在仓库那唯一的一盒里，开启新的 activeRollID）
     func loadNewRoll(stock: FilmStock, format: FilmFormat, capacity: Int) {
         currentStock = stock
         currentFormat = format
         maxFramesPerRoll = capacity
+        activeRollID = UUID()
+        viewingRollID = activeRollID
         frames.removeAll()
         isShutterLocked = false
+        isAdvancingLock = false
         advanceProgress = 0.0
         hardwareAdvanceSlider?.value = 0.0
         stage = .shooting
         HapticManager.shared.playFilmWoundLock()
+    }
+
+    /// 仅切换当前卷的 135 / 120 画幅或张数（不清空已拍照片，随时自由切换 135 与 120）
+    func updateFormatOrCapacity(format: FilmFormat, capacity: Int) {
+        currentFormat = format
+        maxFramesPerRoll = capacity
+        if let idx = savedRolls.firstIndex(where: { $0.id == activeRollID }) {
+            savedRolls[idx].format = format
+            savedRolls[idx].capacity = capacity
+            saveSavedRolls()
+        }
+        HapticManager.shared.playRatchetTick()
     }
 
     func handlePhysicalCameraButtonPress() {
@@ -731,6 +758,7 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
         guard !isShutterLocked, frames.count < maxFramesPerRoll else { return }
         HapticManager.shared.playShutterClick()
         isShutterLocked = true
+        isAdvancingLock = false
         advanceProgress = 0.0
         lastHapticStep = 0
         hardwareAdvanceSlider?.value = 0.0
@@ -741,6 +769,9 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
             settings.photoQualityPrioritization = self.photoOutput.maxPhotoQualityPrioritization
             if let maxDim = self.videoDevice?.activeFormat.supportedMaxPhotoDimensions.last {
                 settings.maxPhotoDimensions = maxDim
+            }
+            if let conn = self.photoOutput.connection(with: .video), conn.isVideoRotationAngleSupported(0) {
+                conn.videoRotationAngle = 0
             }
             photoOutput.capturePhoto(with: settings, delegate: self)
         } else {
@@ -754,7 +785,7 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
             return
         }
         let normalized = normalizeOrientation(rawImg)
-        let cropped = FilmColorEngine.shared.cropToFilmAspectRatio(normalized, format: currentFormat)
+        let cropped = FilmColorEngine.shared.cropToLandscapeFilmAspectRatio(normalized, format: currentFormat)
         saveLatentImageToDisk(cropped)
     }
 
@@ -773,23 +804,52 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
     private func saveLatentImageToDisk(_ image: UIImage) {
         let fileName = "latent_\(UUID().uuidString).jpg"
         let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(fileName)
-        // 1.0 无损最高画质保存
         try? image.jpegData(compressionQuality: 1.0)?.write(to: url)
+
         DispatchQueue.main.async {
-            self.frames.append(
-                FilmFrame(
-                    frameNumber: self.frames.count + 1,
-                    rawFileName: fileName,
-                    captureDate: Date(),
-                    focalMM: self.selectedLens.mmLabel,
-                    format: self.currentFormat
-                )
+            let newFrame = FilmFrame(
+                frameNumber: self.frames.count + 1,
+                rawFileName: fileName,
+                captureDate: Date(),
+                focalMM: self.selectedLens.mmLabel,
+                format: self.currentFormat
             )
+            self.frames.append(newFrame)
+            // 关键：将这张照片追加更新到当前这一卷的同一个暗盒中，绝不新建多余暗盒！
+            self.upsertActiveRollInWarehouse(isDeveloped: false)
         }
     }
 
+    /// 核心修复：保证当前这卷胶卷在仓库里永远只占 1 个金属暗盒
+    private func upsertActiveRollInWarehouse(isDeveloped: Bool) {
+        if let existingIdx = savedRolls.firstIndex(where: { $0.id == activeRollID }) {
+            savedRolls[existingIdx].frames = frames
+            savedRolls[existingIdx].stockID = currentStock.id
+            savedRolls[existingIdx].format = currentFormat
+            savedRolls[existingIdx].capacity = maxFramesPerRoll
+            if isDeveloped {
+                savedRolls[existingIdx].isDeveloped = true
+            }
+        } else {
+            let nextNumber = (savedRolls.map { $0.rollNumber }.max() ?? 0) + 1
+            let newRoll = FilmRollData(
+                id: activeRollID,
+                rollNumber: nextNumber,
+                stockID: currentStock.id,
+                format: currentFormat,
+                capacity: maxFramesPerRoll,
+                frames: frames,
+                isDeveloped: isDeveloped,
+                createdDate: Date()
+            )
+            savedRolls.insert(newRoll, at: 0)
+        }
+        viewingRollID = activeRollID
+        saveSavedRolls()
+    }
+
     func updateFilmAdvance(progress: Double) {
-        guard isShutterLocked else { return }
+        guard isShutterLocked, !isAdvancingLock else { return }
         let clamped = min(max(progress, 0.0), 1.0)
         advanceProgress = clamped
         hardwareAdvanceSlider?.value = Float(clamped)
@@ -800,7 +860,10 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
             HapticManager.shared.playRatchetTick()
         }
 
-        if clamped >= 0.96 { completeFilmAdvance() }
+        if clamped >= 0.96 {
+            isAdvancingLock = true
+            completeFilmAdvance()
+        }
     }
 
     private func completeFilmAdvance() {
@@ -810,22 +873,14 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
             self.advanceProgress = 0.0
             self.hardwareAdvanceSlider?.value = 0.0
             if self.frames.count >= self.maxFramesPerRoll {
-                let newRoll = FilmRollData(
-                    stockID: self.currentStock.id,
-                    format: self.currentFormat,
-                    capacity: self.maxFramesPerRoll,
-                    frames: self.frames,
-                    isDeveloped: false
-                )
-                self.savedRolls.insert(newRoll, at: 0)
-                self.currentActiveRollIndex = 0
-                self.saveSavedRolls()
-
+                self.upsertActiveRollInWarehouse(isDeveloped: false)
+                self.viewingRollID = self.activeRollID
                 self.stage = .darkroom
                 self.darkroomRemainingSeconds = self.darkroomTotalSeconds
                 self.isDeveloping = false
             } else {
                 self.isShutterLocked = false
+                self.isAdvancingLock = false
             }
         }
     }
@@ -852,19 +907,59 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
     func finishDevelopingAndGoToScanner() {
         darkroomTimer?.invalidate()
         isDeveloping = false
-        if savedRolls.indices.contains(currentActiveRollIndex) {
-            savedRolls[currentActiveRollIndex].isDeveloped = true
+        let targetID = viewingRollID ?? activeRollID
+        if let idx = savedRolls.firstIndex(where: { $0.id == targetID }) {
+            savedRolls[idx].isDeveloped = true
+            frames = savedRolls[idx].frames
             saveSavedRolls()
         }
         HapticManager.shared.playFilmWoundLock()
         stage = .lightTableScanner
     }
 
+    /// 从胶卷仓库点击某一盒胶卷进入看片台
+    func openRollFromWarehouse(_ roll: FilmRollData) {
+        viewingRollID = roll.id
+        frames = roll.frames
+        if let stock = allStocks.first(where: { $0.id == roll.stockID }) {
+            currentStock = stock
+        }
+        currentFormat = roll.format
+        stage = .lightTableScanner
+    }
+
+    /// 从看片台返回拍摄界面：如果刚才那卷已经拍满了，自动装入一卷新胶卷准备拍摄
+    func returnToCameraFromScanner() {
+        if let currentRoll = savedRolls.first(where: { $0.id == activeRollID }),
+           currentRoll.frames.count >= currentRoll.capacity {
+            loadNewRoll(stock: currentStock, format: currentFormat, capacity: maxFramesPerRoll)
+        } else {
+            if let activeRoll = savedRolls.first(where: { $0.id == activeRollID }) {
+                frames = activeRoll.frames
+            }
+            viewingRollID = activeRollID
+            stage = .shooting
+        }
+    }
+
     func syncCurrentFramesToWarehouse() {
-        if savedRolls.indices.contains(currentActiveRollIndex) {
-            savedRolls[currentActiveRollIndex].frames = frames
+        let targetID = viewingRollID ?? activeRollID
+        if let idx = savedRolls.firstIndex(where: { $0.id == targetID }) {
+            savedRolls[idx].frames = frames
             saveSavedRolls()
         }
+    }
+
+    /// 一键清除旧版残留的错误单张碎片暗盒
+    func clearAllWarehouseRolls() {
+        savedRolls.removeAll()
+        saveSavedRolls()
+        loadNewRoll(stock: currentStock, format: currentFormat, capacity: maxFramesPerRoll)
+    }
+
+    func deleteRoll(_ roll: FilmRollData) {
+        savedRolls.removeAll { $0.id == roll.id }
+        saveSavedRolls()
     }
 
     func loadRawImage(for frame: FilmFrame) -> UIImage {
@@ -882,7 +977,6 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
             edgeCode: "\(cleanTitle) LUT",
             iso: 400,
             themeColorHex: "#8E44AD",
-            defaultFormat: .mm135,
             customCubeFileName: parsed.fileName,
             cubeDimension: parsed.dimension
         )
@@ -904,11 +998,11 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
     }
 
     private func saveSavedRolls() {
-        if let data = try? JSONEncoder().encode(savedRolls) { UserDefaults.standard.set(data, forKey: "SavedFilmRollsWarehouse") }
+        if let data = try? JSONEncoder().encode(savedRolls) { UserDefaults.standard.set(data, forKey: "SavedFilmRollsWarehouse_v2") }
     }
 
     private func loadSavedRolls() {
-        if let data = UserDefaults.standard.data(forKey: "SavedFilmRollsWarehouse"),
+        if let data = UserDefaults.standard.data(forKey: "SavedFilmRollsWarehouse_v2"),
            let rolls = try? JSONDecoder().decode([FilmRollData].self, from: data) {
             savedRolls = rolls
         }
@@ -925,8 +1019,8 @@ final class FilmCameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptu
     }
 }
 
-// MARK: - 5. 相机实时取景器
-struct CameraPreviewView: UIViewRepresentable {
+// MARK: - 5. 横屏相机实时取景器 (自动锁定摄像头画面为横向正立，拒绝歪斜 90 度)
+struct LandscapeCameraPreviewView: UIViewRepresentable {
     let session: AVCaptureSession
     var onPhysicalPress: () -> Void
 
@@ -934,6 +1028,16 @@ struct CameraPreviewView: UIViewRepresentable {
         override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
         var videoPreviewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
         var pressHandler: (() -> Void)?
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            // 关键：当把手机逆时针横过来握持（灵动岛在左侧，快门在右侧）时，设置预览旋转角为 0 度，画面完全正立！
+            if let connection = videoPreviewLayer.connection {
+                if connection.isVideoRotationAngleSupported(0) {
+                    connection.videoRotationAngle = 0
+                }
+            }
+        }
 
         func setupHardwareEventInteraction() {
             let interaction = AVCaptureEventInteraction { [weak self] event in
@@ -952,7 +1056,9 @@ struct CameraPreviewView: UIViewRepresentable {
         view.setupHardwareEventInteraction()
         return view
     }
-    func updateUIView(_ uiView: VideoPreviewView, context: Context) { uiView.pressHandler = onPhysicalPress }
+    func updateUIView(_ uiView: VideoPreviewView, context: Context) {
+        uiView.pressHandler = onPhysicalPress
+    }
 }
 
 @main
@@ -963,17 +1069,21 @@ struct RetroFilmCamApp: App {
             ZStack {
                 Color.black.ignoresSafeArea()
                 switch vm.stage {
-                case .shooting: VintageCameraShootingView(vm: vm)
-                case .darkroom: DarkroomDevelopingView(vm: vm)
-                case .lightTableScanner: LightTableScannerView(vm: vm)
+                case .shooting:
+                    VintageCameraShootingView(vm: vm)
+                case .darkroom:
+                    DarkroomDevelopingView(vm: vm)
+                case .lightTableScanner:
+                    LightTableScannerView(vm: vm)
                 }
             }
             .preferredColorScheme(.dark)
+            .statusBarHidden(true)
         }
     }
 }
 
-// MARK: - 舞台一：红树下 M 系列机械机身 + iPhone 16 Pro 经典焦段切换环
+// MARK: - 舞台一：100% 还原你图一设计的【横屏握持旁轴相机布局】
 struct VintageCameraShootingView: View {
     @ObservedObject var vm: FilmCameraViewModel
     @State private var showWarehouseSheet = false
@@ -982,167 +1092,228 @@ struct VintageCameraShootingView: View {
     @State private var importAlertMessage: String?
 
     var body: some View {
-        ZStack {
-            Color(red: 0.04, green: 0.04, blue: 0.05).ignoresSafeArea()
+        GeometryReader { fullGeo in
+            let isPortraitContainer = fullGeo.size.height > fullGeo.size.width
+            let landW = max(fullGeo.size.width, fullGeo.size.height)
+            let landH = min(fullGeo.size.width, fullGeo.size.height)
 
-            VStack(spacing: 10) {
-                // 1. 钛金属拉丝顶盖
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(red: 0.40, green: 0.40, blue: 0.38), Color(red: 0.20, green: 0.20, blue: 0.19), Color(red: 0.30, green: 0.29, blue: 0.27), Color(red: 0.12, green: 0.12, blue: 0.11)],
-                                startPoint: .top, endPoint: .bottom
+            ZStack {
+                Color(red: 0.04, green: 0.04, blue: 0.05).ignoresSafeArea()
+
+                // 横向四栏式徕卡旁轴相机主布局（完全对齐你的图一）
+                HStack(spacing: 12) {
+                    // 【左一栏】：竖向钛金属相机顶盖（下侧胶卷小窗、中间帧数圆窗、上方机械过片拨杆）
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color(red: 0.38, green: 0.38, blue: 0.36),
+                                        Color(red: 0.18, green: 0.18, blue: 0.17),
+                                        Color(red: 0.28, green: 0.27, blue: 0.25),
+                                        Color(red: 0.12, green: 0.12, blue: 0.11)
+                                    ],
+                                    startPoint: .leading, endPoint: .trailing
+                                )
                             )
-                        )
-                        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(LinearGradient(colors: [.white.opacity(0.5), .clear, .white.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.2))
-                        .shadow(color: .black.opacity(0.85), radius: 10, x: 0, y: 6)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .strokeBorder(
+                                        LinearGradient(colors: [.white.opacity(0.45), .clear, .white.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                                        lineWidth: 1.2
+                                    )
+                            )
+                            .shadow(color: .black.opacity(0.85), radius: 8, x: 0, y: 4)
 
-                    VStack(spacing: 8) {
-                        HStack {
-                            CameraScrewIcon()
-                            Text("HONGSHUXIA OPTIK · \(vm.selectedLens.mmLabel)  \(vm.currentFormat == .medium120 ? "120 6x6" : "135 35mm")")
-                                .font(.system(size: 8.5, weight: .bold, design: .serif))
-                                .tracking(1.8)
-                                .foregroundColor(Color(red: 0.92, green: 0.88, blue: 0.80).opacity(0.85))
-                            Spacer()
-                            RoundedRectangle(cornerRadius: 2.5)
-                                .fill(LinearGradient(colors: [.white.opacity(0.75), .gray.opacity(0.35), .white.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                .frame(width: 28, height: 10)
-                                .overlay(RoundedRectangle(cornerRadius: 2.5).stroke(Color.black, lineWidth: 1.2))
-                            CameraScrewIcon()
-                        }
-                        .padding(.horizontal, 14)
+                        HStack(spacing: 6) {
+                            // 左侧：镌刻铭文 + 沉头螺丝 + 测距小窗
+                            VStack {
+                                CameraScrewIcon()
+                                RoundedRectangle(cornerRadius: 2.5)
+                                    .fill(LinearGradient(colors: [.white.opacity(0.8), .gray.opacity(0.35), .white.opacity(0.6)], startPoint: .top, endPoint: .bottom))
+                                    .frame(width: 10, height: 26)
+                                    .overlay(RoundedRectangle(cornerRadius: 2.5).stroke(Color.black, lineWidth: 1))
+                                    .padding(.top, 4)
 
-                        HStack(spacing: 10) {
-                            Button { showRollSheet = true } label: {
-                                HStack(spacing: 6) {
-                                    RoundedRectangle(cornerRadius: 2).fill(Color(hex: vm.currentStock.themeColorHex)).frame(width: 5, height: 26)
-                                    VStack(alignment: .leading, spacing: 1) {
-                                        Text(vm.currentStock.name).font(.system(size: 11, weight: .heavy, design: .monospaced)).foregroundColor(Color(red: 1.0, green: 0.86, blue: 0.38))
-                                        Text("\(vm.currentFormat == .medium120 ? "120 6x6" : "135") · ISO \(vm.currentStock.iso) / \(vm.maxFramesPerRoll)EXP")
-                                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced)).foregroundColor(.white.opacity(0.7))
+                                Spacer()
+
+                                Text("HONGSHUXIA OPTIK · \(vm.selectedLens.mmLabel)")
+                                    .font(.system(size: 8, weight: .bold, design: .serif))
+                                    .tracking(1.6)
+                                    .foregroundColor(Color(red: 0.92, green: 0.88, blue: 0.80).opacity(0.85))
+                                    .fixedSize()
+                                    .rotationEffect(.degrees(-90))
+                                    .frame(width: 14, height: 155)
+
+                                Spacer()
+                                CameraScrewIcon()
+                            }
+                            .padding(.vertical, 12)
+
+                            // 右侧：过片扳手(上) + 计数器圆窗(中) + 胶卷型号窗(下)
+                            VStack(spacing: 12) {
+                                VerticalMechanicalLever(
+                                    isLocked: vm.isShutterLocked,
+                                    progress: vm.advanceProgress
+                                ) { newProgress in
+                                    vm.updateFilmAdvance(progress: newProgress)
+                                }
+
+                                Spacer()
+
+                                // 圆形帧数计数器
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.black)
+                                        .frame(width: 42, height: 42)
+                                        .overlay(Circle().stroke(LinearGradient(colors: [.gray, .black, .white.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 2))
+                                    VStack(spacing: 0) {
+                                        Text("FRAME").font(.system(size: 5.5, weight: .bold, design: .monospaced)).foregroundColor(.gray)
+                                        Text(String(format: "%02d", vm.frames.count))
+                                            .font(.system(size: 15, weight: .black, design: .monospaced))
+                                            .foregroundColor(vm.isShutterLocked ? .orange : Color(red: 0.95, green: 0.92, blue: 0.82))
                                     }
                                 }
-                                .padding(.horizontal, 8).padding(.vertical, 5).background(Color.black.opacity(0.85)).cornerRadius(5).overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.white.opacity(0.2), lineWidth: 1))
-                            }
 
-                            Spacer()
+                                Spacer()
 
-                            ZStack {
-                                Circle().fill(Color.black).frame(width: 42, height: 42).overlay(Circle().stroke(LinearGradient(colors: [.gray, .black, .white.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 2))
-                                VStack(spacing: 0) {
-                                    Text("FRAME").font(.system(size: 5.5, weight: .bold, design: .monospaced)).foregroundColor(.gray)
-                                    Text(String(format: "%02d", vm.frames.count)).font(.system(size: 15, weight: .black, design: .monospaced)).foregroundColor(vm.isShutterLocked ? .orange : Color(red: 0.95, green: 0.92, blue: 0.82))
+                                // 底部胶卷型号暗盒小窗
+                                Button { showRollSheet = true } label: {
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        RoundedRectangle(cornerRadius: 1.5)
+                                            .fill(Color(hex: vm.currentStock.themeColorHex))
+                                            .frame(width: 34, height: 4)
+                                        Text(vm.currentStock.name)
+                                            .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                                            .foregroundColor(Color(red: 1.0, green: 0.86, blue: 0.38))
+                                            .lineLimit(1)
+                                        Text("\(vm.currentFormat == .medium120 ? "120" : "135") · \(vm.maxFramesPerRoll)EXP")
+                                            .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                                            .foregroundColor(.white.opacity(0.75))
+                                    }
+                                    .padding(7)
+                                    .frame(width: 56)
+                                    .background(Color.black.opacity(0.85))
+                                    .cornerRadius(6)
+                                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.2), lineWidth: 1))
                                 }
                             }
-
-                            MechanicalAdvanceLever(isLocked: vm.isShutterLocked, progress: vm.advanceProgress) { newProgress in
-                                vm.updateFilmAdvance(progress: newProgress)
-                            }
+                            .padding(.vertical, 10)
                         }
-                        .padding(.horizontal, 14)
+                        .padding(.horizontal, 8)
                     }
-                    .padding(.vertical, 10)
-                }
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 12)
+                    .frame(width: 84, height: landH - 24)
 
-                // 2. 荔枝纹蒙皮机身 + 宽屏 3:2 / 120 6x6 取景框 + iPhone 16 Pro 经典焦段切换环
-                ZStack {
-                    RoundedRectangle(cornerRadius: 22)
-                        .fill(Color(red: 0.08, green: 0.08, blue: 0.09))
-                        .overlay(LeatheretteGrainCanvas().clipShape(RoundedRectangle(cornerRadius: 22)).opacity(0.35))
-                        .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(LinearGradient(colors: [.white.opacity(0.25), .black.opacity(0.95), .white.opacity(0.12)], startPoint: .top, endPoint: .bottom), lineWidth: 2))
-                        .shadow(color: .black.opacity(0.9), radius: 12, x: 0, y: 8)
+                    // 【中间核心栏】：荔枝纹蒙皮机身 + 顶部红标/胶卷仓库 + 横向正立大取景窗 + 底部焦段按钮排
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 22)
+                            .fill(Color(red: 0.08, green: 0.08, blue: 0.09))
+                            .overlay(LeatheretteGrainCanvas().clipShape(RoundedRectangle(cornerRadius: 22)).opacity(0.35))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 22)
+                                    .strokeBorder(LinearGradient(colors: [.white.opacity(0.25), .black.opacity(0.95), .white.opacity(0.12)], startPoint: .top, endPoint: .bottom), lineWidth: 2)
+                            )
+                            .shadow(color: .black.opacity(0.9), radius: 12, x: 0, y: 8)
 
-                    VStack(spacing: 10) {
-                        HStack {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 4).fill(RadialGradient(colors: [Color(red: 0.92, green: 0.16, blue: 0.13), Color(red: 0.60, green: 0.06, blue: 0.05)], center: .topLeading, startRadius: 2, endRadius: 22)).frame(width: 62, height: 20)
-                                Text("红树下").font(.system(size: 11, weight: .bold, design: .serif)).foregroundColor(.white)
-                            }
-                            .shadow(color: .black.opacity(0.6), radius: 3, x: 0, y: 2)
-
-                            Spacer()
-
-                            // 胶卷仓库入口
-                            Button {
-                                showWarehouseSheet = true
-                            } label: {
-                                HStack(spacing: 5) {
-                                    Image(systemName: "cylinder.split.1x2.fill").foregroundColor(.yellow)
-                                    Text("胶卷仓库 (\(vm.savedRolls.count))")
-                                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                                        .foregroundColor(.yellow)
+                        VStack(spacing: 10) {
+                            // 机身顶部：左侧“红树下”红标 + 右侧“胶卷仓库”入口
+                            HStack {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 5)
+                                        .fill(
+                                            RadialGradient(colors: [Color(red: 0.92, green: 0.16, blue: 0.13), Color(red: 0.60, green: 0.06, blue: 0.05)], center: .topLeading, startRadius: 2, endRadius: 26)
+                                        )
+                                        .frame(width: 66, height: 24)
+                                    Text("红树下")
+                                        .font(.system(size: 11.5, weight: .bold, design: .serif))
+                                        .foregroundColor(.white)
                                 }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(Color.black.opacity(0.8))
-                                .cornerRadius(10)
-                                .overlay(Capsule().stroke(Color.yellow.opacity(0.5), lineWidth: 1))
+                                .shadow(color: .black.opacity(0.6), radius: 3, x: 0, y: 2)
+
+                                Spacer()
+
+                                // 一卷一盒的胶卷仓库入口
+                                Button {
+                                    showWarehouseSheet = true
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "cylinder.split.1x2.fill")
+                                            .foregroundColor(.yellow)
+                                        Text("胶卷仓库 (\(vm.savedRolls.count)卷)")
+                                            .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                                            .foregroundColor(.yellow)
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.black.opacity(0.8))
+                                    .cornerRadius(14)
+                                    .overlay(Capsule().stroke(Color.yellow.opacity(0.55), lineWidth: 1))
+                                }
                             }
-                        }
-                        .padding(.horizontal, 18)
+                            .padding(.horizontal, 24)
 
-                        // 关键取景窗：135 胶卷为宽幅 3:2 横构图 (312 x 208)，120 胶卷为 1:1 哈苏方画幅 (220 x 220)
-                        let vfWidth: CGFloat = (vm.currentFormat == .medium120) ? 216 : 312
-                        let vfHeight: CGFloat = (vm.currentFormat == .medium120) ? 216 : 208
+                            // 中央横向正立大取景框（135 为 3:2 宽屏，120 为 1:1 哈苏方画幅）
+                            let vfHeight: CGFloat = min(landH - 122, 224)
+                            let vfWidth: CGFloat = (vm.currentFormat == .medium120) ? vfHeight : (vfHeight * 1.5)
 
-                        ZStack {
-                            CameraPreviewView(session: vm.session) { vm.handlePhysicalCameraButtonPress() }
+                            ZStack {
+                                LandscapeCameraPreviewView(session: vm.session) {
+                                    vm.handlePhysicalCameraButtonPress()
+                                }
                                 .frame(width: vfWidth, height: vfHeight)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
 
-                            // 徕卡明亮框线与黄斑对焦区
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 4)
-                                    .stroke(Color.white.opacity(0.75), style: StrokeStyle(lineWidth: 1, dash: [8, 4]))
-                                    .padding(12)
-                                Rectangle()
-                                    .fill(Color.yellow.opacity(0.15))
-                                    .frame(width: 42, height: 28)
-                                    .overlay(Rectangle().stroke(Color.yellow.opacity(0.65), lineWidth: 0.8))
+                                // 徕卡旁轴明亮框线与中心黄斑对焦区
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .stroke(Color.white.opacity(0.78), style: StrokeStyle(lineWidth: 1.1, dash: [8, 4]))
+                                        .padding(12)
 
-                                // 取景框右下角焦段与画幅浮标
-                                VStack {
-                                    Spacer()
-                                    HStack {
+                                    Rectangle()
+                                        .fill(Color.yellow.opacity(0.16))
+                                        .frame(width: 46, height: 30)
+                                        .overlay(Rectangle().stroke(Color.yellow.opacity(0.65), lineWidth: 0.8))
+
+                                    VStack {
                                         Spacer()
-                                        Text("\(vm.selectedLens.mmLabel) · \(vm.currentFormat == .medium120 ? "6x6" : "3:2")")
-                                            .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                            .foregroundColor(.yellow.opacity(0.9))
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 2)
-                                            .background(Color.black.opacity(0.6))
-                                            .cornerRadius(4)
-                                            .padding(16)
+                                        HStack {
+                                            Spacer()
+                                            Text("\(vm.selectedLens.mmLabel) · \(vm.currentFormat == .medium120 ? "120 6x6" : "3:2")")
+                                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                                .foregroundColor(.yellow)
+                                                .padding(.horizontal, 7)
+                                                .padding(.vertical, 2.5)
+                                                .background(Color.black.opacity(0.65))
+                                                .cornerRadius(4)
+                                                .padding(16)
+                                        }
                                     }
                                 }
-                            }
-                            .frame(width: vfWidth, height: vfHeight)
-                            .allowsHitTesting(false)
+                                .frame(width: vfWidth, height: vfHeight)
+                                .allowsHitTesting(false)
 
-                            if vm.isShutterLocked {
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color.black.opacity(0.76))
-                                    .frame(width: vfWidth, height: vfHeight)
-                                    .overlay(
-                                        VStack(spacing: 8) {
-                                            Image(systemName: "hand.tap.fill").font(.system(size: 26)).foregroundColor(.orange)
-                                            Text(vm.frames.count >= vm.maxFramesPerRoll ? "整卷已拍满！过片即刻送进暗房" : "快门机械锁死 · 请滑动【相机控制键】或拨杆过片")
-                                                .font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundColor(.white).multilineTextAlignment(.center).padding(.horizontal, 16)
-                                        }
-                                    )
+                                if vm.isShutterLocked {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color.black.opacity(0.75))
+                                        .frame(width: vfWidth, height: vfHeight)
+                                        .overlay(
+                                            VStack(spacing: 8) {
+                                                Image(systemName: "hand.draw.fill").font(.system(size: 26)).foregroundColor(.orange)
+                                                Text(vm.frames.count >= vm.maxFramesPerRoll ? "整卷已拍满！请拨动右侧滑轨送入暗房" : "快门已锁死 · 请滑动右侧过片条或实体按键过片")
+                                                    .font(.system(size: 11.5, weight: .bold, design: .monospaced))
+                                                    .foregroundColor(.white)
+                                                    .multilineTextAlignment(.center)
+                                                    .padding(.horizontal, 18)
+                                            }
+                                        )
+                                }
                             }
-                        }
-                        .padding(5)
-                        .background(RoundedRectangle(cornerRadius: 14).fill(LinearGradient(colors: [Color(white: 0.28), Color(white: 0.08), Color(white: 0.22)], startPoint: .topLeading, endPoint: .bottomTrailing)))
-                        .shadow(color: .black.opacity(0.9), radius: 8, x: 0, y: 5)
-                        .animation(.spring(response: 0.35), value: vm.currentFormat)
+                            .padding(5)
+                            .background(RoundedRectangle(cornerRadius: 14).fill(LinearGradient(colors: [Color(white: 0.28), Color(white: 0.08), Color(white: 0.22)], startPoint: .topLeading, endPoint: .bottomTrailing)))
+                            .shadow(color: .black.opacity(0.9), radius: 8, x: 0, y: 5)
+                            .animation(.spring(response: 0.32), value: vm.currentFormat)
 
-                        // iPhone 16 Pro 三摄 + 经典定焦快速切换环 (13mm / 24mm / 28mm / 35mm / 50mm / 120mm)
-                        ScrollView(.horizontal, showsIndicators: false) {
+                            // 底部 iPhone 16 Pro 六颗经典焦段按钮排 (13mm ~ 120mm)
                             HStack(spacing: 8) {
                                 ForEach(FocalLensOption.iPhone16ProLenses) { lens in
                                     let isSelected = (vm.selectedLens == lens)
@@ -1154,12 +1325,12 @@ struct VintageCameraShootingView: View {
                                                 .font(.system(size: 11, weight: .heavy, design: .monospaced))
                                                 .foregroundColor(isSelected ? .black : .white)
                                             Text(lens.subLabel)
-                                                .font(.system(size: 8, weight: .semibold))
-                                                .foregroundColor(isSelected ? .black.opacity(0.75) : .gray)
+                                                .font(.system(size: 7.5, weight: .semibold))
+                                                .foregroundColor(isSelected ? .black.opacity(0.78) : .gray)
                                         }
                                         .padding(.horizontal, 10)
                                         .padding(.vertical, 5)
-                                        .background(isSelected ? Color.yellow : Color.black.opacity(0.7))
+                                        .background(isSelected ? Color.yellow : Color.black.opacity(0.75))
                                         .cornerRadius(8)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 8)
@@ -1168,46 +1339,80 @@ struct VintageCameraShootingView: View {
                                     }
                                 }
                             }
-                            .padding(.horizontal, 14)
+                        }
+                        .padding(.vertical, 10)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: landH - 24)
+
+                    // 【右二栏】：竖向过片滑轨条（右手大拇指上下滑动即可过片）
+                    VerticalSlideAdvanceBar(
+                        isLocked: vm.isShutterLocked,
+                        progress: vm.advanceProgress
+                    ) { newProgress in
+                        vm.updateFilmAdvance(progress: newProgress)
+                    }
+                    .frame(width: 52, height: landH - 24)
+
+                    // 【最右侧栏】：右手握持三联转盘（上：装卷/120，中：红色机械快门，下：LUT工坊）
+                    VStack(spacing: 22) {
+                        Button { showRollSheet = true } label: {
+                            KnurledMetalDialButton(
+                                icon: "film.stack.fill",
+                                title: "装卷/120",
+                                accentColor: Color(red: 0.98, green: 0.82, blue: 0.32)
+                            )
+                        }
+
+                        Button { vm.capturePhoto() } label: {
+                            ZStack {
+                                Circle()
+                                    .fill(LinearGradient(colors: [Color(white: 0.72), Color(white: 0.25), Color(white: 0.52)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                    .frame(width: 78, height: 78)
+                                    .shadow(color: .black.opacity(0.85), radius: 6, x: 0, y: 4)
+                                Circle()
+                                    .stroke(Color.black.opacity(0.6), style: StrokeStyle(lineWidth: 3, dash: [2, 2]))
+                                    .frame(width: 72, height: 72)
+                                Circle()
+                                    .fill(
+                                        RadialGradient(
+                                            colors: vm.isShutterLocked ? [Color(white: 0.3), Color(white: 0.15)] : [Color(red: 0.92, green: 0.18, blue: 0.14), Color(red: 0.55, green: 0.06, blue: 0.05)],
+                                            center: .topLeading, startRadius: 4, endRadius: 40
+                                        )
+                                    )
+                                    .frame(width: 58, height: 58)
+                                    .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+                                Circle()
+                                    .fill(Color(white: 0.1))
+                                    .frame(width: 15, height: 15)
+                                    .overlay(Circle().stroke(Color.white.opacity(0.5), lineWidth: 1.2))
+                            }
+                        }
+                        .disabled(vm.isShutterLocked)
+
+                        Button { showCubeImporter = true } label: {
+                            KnurledMetalDialButton(
+                                icon: "cube.transparent.fill",
+                                title: "LUT工坊",
+                                accentColor: Color(red: 0.85, green: 0.82, blue: 0.75)
+                            )
                         }
                     }
-                    .padding(.vertical, 12)
-                }
-                .padding(.horizontal, 12)
-
-                // 3. 过片触控条
-                AppleCameraSlideAdvanceBar(isLocked: vm.isShutterLocked, progress: vm.advanceProgress) { newProgress in
-                    vm.updateFilmAdvance(progress: newProgress)
+                    .frame(width: 84, height: landH - 24)
                 }
                 .padding(.horizontal, 14)
-
-                // 4. 底部操作台
-                HStack(spacing: 36) {
-                    Button { showCubeImporter = true } label: {
-                        KnurledMetalDialButton(icon: "cube.transparent.fill", title: "LUT工坊", accentColor: Color(red: 0.85, green: 0.82, blue: 0.75))
-                    }
-
-                    Button { vm.capturePhoto() } label: {
-                        ZStack {
-                            Circle().fill(LinearGradient(colors: [Color(white: 0.7), Color(white: 0.25), Color(white: 0.5)], startPoint: .topLeading, endPoint: .bottomTrailing)).frame(width: 74, height: 74).shadow(color: .black.opacity(0.8), radius: 6, x: 0, y: 4)
-                            Circle().stroke(Color.black.opacity(0.6), style: StrokeStyle(lineWidth: 3, dash: [2, 2])).frame(width: 68, height: 68)
-                            Circle().fill(RadialGradient(colors: vm.isShutterLocked ? [Color(white: 0.3), Color(white: 0.15)] : [Color(red: 0.9, green: 0.18, blue: 0.14), Color(red: 0.55, green: 0.06, blue: 0.05)], center: .topLeading, startRadius: 4, endRadius: 38)).frame(width: 54, height: 54).overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
-                            Circle().fill(Color(white: 0.1)).frame(width: 14, height: 14).overlay(Circle().stroke(Color(white: 0.5), lineWidth: 1.2))
-                        }
-                    }
-                    .disabled(vm.isShutterLocked)
-
-                    Button { showRollSheet = true } label: {
-                        KnurledMetalDialButton(icon: "film.stack.fill", title: "装卷/120", accentColor: Color(red: 0.98, green: 0.82, blue: 0.32))
-                    }
-                }
-                .padding(.bottom, 4)
+                .frame(width: landW, height: landH)
+                // 当工程处于竖屏容器时，自动顺时针旋转 90 度铺满全屏，横握手机时所有 UI 与摄像头画面完全正立！
+                .rotationEffect(isPortraitContainer ? .degrees(90) : .degrees(0))
+                .frame(width: fullGeo.size.width, height: fullGeo.size.height)
             }
         }
+        .ignoresSafeArea()
         .sheet(isPresented: $showWarehouseSheet) {
             FilmWarehouseView(vm: vm)
         }
-        .sheet(isPresented: $showRollSheet) { FilmRollSelectorSheet(vm: vm) }
+        .sheet(isPresented: $showRollSheet) {
+            FilmRollSelectorSheet(vm: vm)
+        }
         .fileImporter(isPresented: $showCubeImporter, allowedContentTypes: [UTType(filenameExtension: "cube") ?? .data], allowsMultipleSelection: false) { result in
             if case .success(let urls) = result, let first = urls.first {
                 do {
@@ -1224,7 +1429,103 @@ struct VintageCameraShootingView: View {
     }
 }
 
-// MARK: - 拟物化“胶卷仓库”界面（金属暗盒整齐陈列，点击进入看片台扫描）
+// 顶盖竖向过片扳手
+struct VerticalMechanicalLever: View {
+    let isLocked: Bool
+    let progress: Double
+    let onDragProgress: (Double) -> Void
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            Capsule()
+                .fill(Color(red: 0.05, green: 0.05, blue: 0.05))
+                .frame(width: 36, height: 96)
+                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                .overlay(
+                    Text(isLocked ? "WIND" : "READY")
+                        .font(.system(size: 8, weight: .heavy, design: .monospaced))
+                        .foregroundColor(isLocked ? .orange : Color(red: 0.35, green: 0.85, blue: 0.5))
+                        .rotationEffect(.degrees(-90))
+                )
+
+            Circle()
+                .fill(LinearGradient(colors: [Color(white: 0.92), Color(white: 0.42)], startPoint: .leading, endPoint: .trailing))
+                .frame(width: 30, height: 30)
+                .overlay(Circle().stroke(Color.black.opacity(0.6), lineWidth: 1.5))
+                .offset(y: -CGFloat(progress) * 60 - 3)
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            guard isLocked else { return }
+                            onDragProgress(Double(-value.translation.height / 60.0))
+                        }
+                        .onEnded { _ in
+                            if progress < 0.96 { withAnimation(.spring()) { onDragProgress(0.0) } }
+                        }
+                )
+        }
+    }
+}
+
+// 右侧竖向拇指滑动过片条（完美贴合图一右侧滑轨）
+struct VerticalSlideAdvanceBar: View {
+    let isLocked: Bool
+    let progress: Double
+    let onSlideProgress: (Double) -> Void
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .bottom) {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color(white: 0.1))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.12), lineWidth: 1))
+
+                // 刻度线
+                VStack(spacing: 8) {
+                    ForEach(0..<18, id: \.self) { idx in
+                        Rectangle()
+                            .fill(idx % 4 == 0 ? Color.orange.opacity(0.75) : Color.white.opacity(0.2))
+                            .frame(width: idx % 4 == 0 ? 14 : 7, height: 1.5)
+                    }
+                }
+
+                // 顶部百分比提示
+                VStack {
+                    Text("\(Int(progress * 100))%")
+                        .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                        .foregroundColor(.orange)
+                        .padding(.top, 10)
+                    Spacer()
+                }
+
+                // 拇指滑块
+                Capsule()
+                    .fill(isLocked ? Color.orange : Color.gray.opacity(0.35))
+                    .frame(width: 34, height: 48)
+                    .overlay(
+                        Image(systemName: "chevron.up.2")
+                            .font(.system(size: 11, weight: .black))
+                            .foregroundColor(.black)
+                    )
+                    .offset(y: -(geo.size.height - 60) * CGFloat(progress) - 6)
+            }
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        guard isLocked else { return }
+                        let invertedY = geo.size.height - value.location.y
+                        onSlideProgress(Double(invertedY / geo.size.height))
+                    }
+                    .onEnded { _ in
+                        if progress < 0.96 { withAnimation(.spring()) { onSlideProgress(0.0) } }
+                    }
+            )
+        }
+    }
+}
+
+// MARK: - 拟物化“胶卷仓库”界面（修复后：严格一卷胶卷一个金属暗盒，绝不按单张拆分）
 struct FilmWarehouseView: View {
     @ObservedObject var vm: FilmCameraViewModel
     @Environment(\.dismiss) private var dismiss
@@ -1236,18 +1537,30 @@ struct FilmWarehouseView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("已拍满存档的胶卷金属暗盒（点击进入扫描看片台）")
-                            .font(.system(size: 12, weight: .bold, design: .monospaced))
-                            .foregroundColor(.gray)
-                            .padding(.horizontal, 16)
-                            .padding(.top, 10)
+                        HStack {
+                            Text("一卷一盒 · 点击任意金属暗盒进入看片台扫描整卷")
+                                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                .foregroundColor(.gray)
+                            Spacer()
+                            if !vm.savedRolls.isEmpty {
+                                Button(role: .destructive) {
+                                    vm.clearAllWarehouseRolls()
+                                } label: {
+                                    Text("清空仓库")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(.red)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 10)
 
                         if vm.savedRolls.isEmpty {
                             VStack(spacing: 12) {
                                 Image(systemName: "cylinder.split.1x2")
                                     .font(.system(size: 42))
                                     .foregroundColor(.gray)
-                                Text("胶卷仓库暂无存档\n拍满一卷后暗盒会自动排列在此处")
+                                Text("胶卷仓库暂无存档\n每拍一卷胶卷，会在这里生成一个金属暗盒（内含整卷底片）")
                                     .font(.system(size: 13, design: .monospaced))
                                     .foregroundColor(.gray)
                                     .multilineTextAlignment(.center)
@@ -1255,15 +1568,11 @@ struct FilmWarehouseView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.top, 80)
                         } else {
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 155), spacing: 16)], spacing: 16) {
-                                ForEach(Array(vm.savedRolls.enumerated()), id: \.element.id) { idx, roll in
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 16)], spacing: 16) {
+                                ForEach(vm.savedRolls) { roll in
                                     let stock = vm.allStocks.first(where: { $0.id == roll.stockID }) ?? vm.allStocks[0]
                                     Button {
-                                        vm.currentActiveRollIndex = idx
-                                        vm.frames = roll.frames
-                                        vm.currentStock = stock
-                                        vm.currentFormat = roll.format
-                                        vm.stage = .lightTableScanner
+                                        vm.openRollFromWarehouse(roll)
                                         dismiss()
                                     } label: {
                                         VStack(spacing: 8) {
@@ -1271,7 +1580,7 @@ struct FilmWarehouseView: View {
                                                 // 金属胶卷轴心
                                                 RoundedRectangle(cornerRadius: 4)
                                                     .fill(Color(white: 0.28))
-                                                    .frame(width: 34, height: 86)
+                                                    .frame(width: 34, height: 92)
                                                 // 胶卷金属罐体
                                                 RoundedRectangle(cornerRadius: 8)
                                                     .fill(
@@ -1280,17 +1589,17 @@ struct FilmWarehouseView: View {
                                                             startPoint: .topLeading, endPoint: .bottomTrailing
                                                         )
                                                     )
-                                                    .frame(height: 74)
+                                                    .frame(height: 78)
                                                     .overlay(
                                                         VStack(spacing: 3) {
-                                                            Text(roll.format == .medium120 ? "120 MEDIUM" : "135 FILM")
-                                                                .font(.system(size: 8, weight: .black, design: .monospaced))
-                                                                .foregroundColor(.white.opacity(0.8))
+                                                            Text("第 \(String(format: "%02d", roll.rollNumber)) 卷 · \(roll.format == .medium120 ? "120 6x6" : "135")")
+                                                                .font(.system(size: 8.5, weight: .black, design: .monospaced))
+                                                                .foregroundColor(.white.opacity(0.85))
                                                             Text(stock.name)
                                                                 .font(.system(size: 13, weight: .heavy, design: .monospaced))
                                                                 .foregroundColor(.white)
                                                                 .lineLimit(1)
-                                                            Text("\(roll.frames.count) EXP")
+                                                            Text("内含 \(roll.frames.count) / \(roll.capacity) 张底片")
                                                                 .font(.system(size: 10, weight: .bold, design: .monospaced))
                                                                 .foregroundColor(.yellow)
                                                         }
@@ -1298,9 +1607,9 @@ struct FilmWarehouseView: View {
                                                     )
                                                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.25), lineWidth: 1.2))
                                             }
-                                            Text(roll.isDeveloped ? "● 已显影 · 点击看片扫描" : "● 待显影 · 点击冲洗")
+                                            Text(roll.frames.count >= roll.capacity ? "● 已拍满整卷 · 点击扫描" : "● 拍摄中 (\(roll.frames.count)/\(roll.capacity)) · 点击查看")
                                                 .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                                                .foregroundColor(roll.isDeveloped ? .green : .orange)
+                                                .foregroundColor(roll.frames.count >= roll.capacity ? .green : .orange)
                                         }
                                         .padding(10)
                                         .background(Color(white: 0.11))
@@ -1315,7 +1624,7 @@ struct FilmWarehouseView: View {
                     .padding(.bottom, 30)
                 }
             }
-            .navigationTitle("红树下 · 胶卷仓库")
+            .navigationTitle("红树下 · 胶卷暗盒仓库")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -1362,7 +1671,7 @@ struct KnurledMetalDialButton: View {
         ZStack {
             Circle()
                 .fill(LinearGradient(colors: [Color(white: 0.26), Color(white: 0.1)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 56, height: 56)
+                .frame(width: 58, height: 58)
                 .overlay(Circle().stroke(Color.white.opacity(0.2), style: StrokeStyle(lineWidth: 2, dash: [3, 2])))
                 .shadow(color: .black.opacity(0.7), radius: 4, x: 0, y: 3)
             VStack(spacing: 3) {
@@ -1374,111 +1683,26 @@ struct KnurledMetalDialButton: View {
     }
 }
 
-struct MechanicalAdvanceLever: View {
-    let isLocked: Bool
-    let progress: Double
-    let onDragProgress: (Double) -> Void
-    var body: some View {
-        ZStack(alignment: .leading) {
-            Capsule()
-                .fill(Color(red: 0.05, green: 0.05, blue: 0.05))
-                .frame(width: 106, height: 36)
-                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
-                .overlay(
-                    Text(isLocked ? "WIND ➔" : "READY")
-                        .font(.system(size: 8.5, weight: .heavy, design: .monospaced))
-                        .foregroundColor(isLocked ? .orange : Color(red: 0.35, green: 0.85, blue: 0.5))
-                        .padding(.leading, 12)
-                )
-            Circle()
-                .fill(LinearGradient(colors: [Color(white: 0.9), Color(white: 0.4)], startPoint: .top, endPoint: .bottom))
-                .frame(width: 32, height: 32)
-                .overlay(Circle().stroke(Color.black.opacity(0.6), lineWidth: 1.5))
-                .shadow(color: .black.opacity(0.6), radius: 2, x: 0, y: 2)
-                .offset(x: CGFloat(progress) * 70 + 2)
-                .gesture(
-                    DragGesture()
-                        .onChanged { value in
-                            guard isLocked else { return }
-                            onDragProgress(Double(value.translation.width / 70.0))
-                        }
-                        .onEnded { _ in
-                            if progress < 0.96 { withAnimation(.spring()) { onDragProgress(0.0) } }
-                        }
-                )
-        }
-    }
-}
-
-struct AppleCameraSlideAdvanceBar: View {
-    let isLocked: Bool
-    let progress: Double
-    let onSlideProgress: (Double) -> Void
-    var body: some View {
-        VStack(spacing: 4) {
-            HStack {
-                Image(systemName: "dial.medium.fill").font(.system(size: 10)).foregroundColor(isLocked ? .orange : .gray)
-                Text(isLocked ? "滑动机身【相机控制键】或下方滑轨机械过片" : "快门已上弦 · 按实体按键或红钮拍摄")
-                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                    .foregroundColor(isLocked ? Color(red: 0.98, green: 0.82, blue: 0.32) : .gray)
-                Spacer()
-                Text("\(Int(progress * 100))%").font(.system(size: 10, weight: .heavy, design: .monospaced)).foregroundColor(.orange)
-            }
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.black.opacity(0.7))
-                        .overlay(
-                            HStack(spacing: 6) {
-                                ForEach(0..<24, id: \.self) { idx in
-                                    Rectangle()
-                                        .fill(idx % 5 == 0 ? Color.orange.opacity(0.75) : Color.white.opacity(0.2))
-                                        .frame(width: 1.5, height: idx % 5 == 0 ? 12 : 6)
-                                }
-                            }
-                        )
-                    RoundedRectangle(cornerRadius: 12).fill(Color.orange.opacity(0.3)).frame(width: max(40, geo.size.width * CGFloat(progress)))
-                    Capsule()
-                        .fill(isLocked ? Color.orange : Color.gray.opacity(0.4))
-                        .frame(width: 48, height: 24)
-                        .overlay(Image(systemName: "chevron.right.2").font(.system(size: 10, weight: .black)).foregroundColor(.black))
-                        .offset(x: (geo.size.width - 52) * CGFloat(progress) + 2)
-                }
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { value in
-                            guard isLocked else { return }
-                            onSlideProgress(Double(value.location.x / geo.size.width))
-                        }
-                        .onEnded { _ in
-                            if progress < 0.96 { withAnimation(.spring()) { onSlideProgress(0.0) } }
-                        }
-                )
-            }
-            .frame(height: 26)
-        }
-        .padding(8)
-        .background(Color(white: 0.1))
-        .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), lineWidth: 1))
-    }
-}
-
-// MARK: - 胶卷与 135/120 画幅装填仓
+// MARK: - 胶卷与 135/120 画幅装填仓（已修复：切换 135 或 120 立即 100% 生效，绝不卡死在 120）
 struct FilmRollSelectorSheet: View {
     @ObservedObject var vm: FilmCameraViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedCapacity: Int = 12
-    @State private var selectedFormat: FilmFormat = .mm135
 
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("1. 选择胶卷画幅规格 (135 全画幅 / 120 哈苏方画幅)").font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundColor(.gray)
-                        Picker("胶卷画幅", selection: $selectedFormat) {
+                        Text("1. 选择胶卷画幅规格 (点击立即切换 135 / 120)").font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundColor(.gray)
+                        Picker(
+                            "胶卷画幅",
+                            selection: Binding(
+                                get: { vm.currentFormat },
+                                set: { newFormat in
+                                    vm.updateFormatOrCapacity(format: newFormat, capacity: vm.maxFramesPerRoll)
+                                }
+                            )
+                        ) {
                             ForEach(FilmFormat.allCases) { fmt in
                                 Text(fmt.rawValue).tag(fmt)
                             }
@@ -1486,7 +1710,15 @@ struct FilmRollSelectorSheet: View {
                         .pickerStyle(.segmented)
 
                         Text("2. 选择每卷张数").font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundColor(.gray).padding(.top, 4)
-                        Picker("每卷张数", selection: $selectedCapacity) {
+                        Picker(
+                            "每卷张数",
+                            selection: Binding(
+                                get: { vm.maxFramesPerRoll },
+                                set: { newCap in
+                                    vm.updateFormatOrCapacity(format: vm.currentFormat, capacity: newCap)
+                                }
+                            )
+                        ) {
                             Text("6 EXP · 爽快半卷").tag(6)
                             Text("12 EXP · 标准整卷").tag(12)
                         }
@@ -1495,12 +1727,12 @@ struct FilmRollSelectorSheet: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 10)
 
-                    Text("3. 点击装填胶卷型号（已加入 Fuji Pro 400H / Ektar 100 / 金200 / 120）").font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundColor(.gray).padding(.horizontal, 16)
+                    Text("3. 点击下方任意胶卷开启新的一卷（任意胶卷均支持 135 与 120）").font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundColor(.gray).padding(.horizontal, 16)
 
                     ForEach(vm.allStocks) { stock in
                         Button {
-                            let finalFormat = (stock.defaultFormat == .medium120) ? .medium120 : selectedFormat
-                            vm.loadNewRoll(stock: stock, format: finalFormat, capacity: selectedCapacity)
+                            // 严格尊重你顶部选中的 135 或 120 画幅，不再强制锁定
+                            vm.loadNewRoll(stock: stock, format: vm.currentFormat, capacity: vm.maxFramesPerRoll)
                             dismiss()
                         } label: {
                             HStack(spacing: 14) {
@@ -1510,7 +1742,7 @@ struct FilmRollSelectorSheet: View {
                                         .fill(LinearGradient(colors: [Color(hex: stock.themeColorHex), Color.black.opacity(0.8)], startPoint: .leading, endPoint: .trailing))
                                         .frame(width: 44, height: 50)
                                         .overlay(VStack(spacing: 1) {
-                                            Text(stock.defaultFormat == .medium120 ? "120" : "135").font(.system(size: 7.5, weight: .black, design: .monospaced)).foregroundColor(.white.opacity(0.85))
+                                            Text(vm.currentFormat == .medium120 ? "120" : "135").font(.system(size: 7.5, weight: .black, design: .monospaced)).foregroundColor(.white.opacity(0.85))
                                             Text("\(stock.iso)").font(.system(size: 13, weight: .heavy, design: .monospaced)).foregroundColor(.white)
                                         })
                                 }
@@ -1518,7 +1750,7 @@ struct FilmRollSelectorSheet: View {
                                     HStack {
                                         Text(stock.name).font(.system(size: 16, weight: .heavy, design: .monospaced)).foregroundColor(.white)
                                         if vm.currentStock.id == stock.id {
-                                            Text("已装填").font(.system(size: 8.5, weight: .black, design: .monospaced)).padding(.horizontal, 5).padding(.vertical, 2).background(Color.orange).foregroundColor(.black).cornerRadius(3)
+                                            Text("当前装填").font(.system(size: 8.5, weight: .black, design: .monospaced)).padding(.horizontal, 5).padding(.vertical, 2).background(Color.orange).foregroundColor(.black).cornerRadius(3)
                                         }
                                     }
                                     Text(stock.subtitle).font(.system(size: 11.5, weight: .medium)).foregroundColor(.white.opacity(0.75))
@@ -1541,12 +1773,8 @@ struct FilmRollSelectorSheet: View {
             .navigationTitle("装填 135 / 120 胶卷")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) { Button("关闭") { dismiss() }.foregroundColor(.orange) }
+                ToolbarItem(placement: .navigationBarTrailing) { Button("完成") { dismiss() }.foregroundColor(.orange) }
             }
-        }
-        .onAppear {
-            selectedCapacity = vm.maxFramesPerRoll
-            selectedFormat = vm.currentFormat
         }
     }
 }
@@ -1561,7 +1789,7 @@ struct DarkroomDevelopingView: View {
             VStack(spacing: 24) {
                 Image(systemName: "light.beacon.max.fill").font(.system(size: 50)).foregroundColor(.red).shadow(color: .red, radius: 15)
                 Text("暗房显影定影中").font(.system(size: 22, weight: .bold, design: .monospaced)).foregroundColor(.white)
-                Text("当前卷：\(vm.currentStock.name)（\(vm.frames.count) 张潜影）").font(.system(size: 12)).foregroundColor(.red.opacity(0.85))
+                Text("当前卷：\(vm.currentStock.name)（整卷共 \(vm.frames.count) 张潜影）").font(.system(size: 12)).foregroundColor(.red.opacity(0.85))
 
                 if !vm.isDeveloping {
                     VStack(spacing: 12) {
@@ -1608,15 +1836,14 @@ struct LightTableScannerView: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            // 1. 顶部看片台背光控制栏 + 放大镜缩放滑杆
             VStack(spacing: 6) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("HONGSHUXIA LIGHT TABLE 5500K").font(.system(size: 12, weight: .heavy, design: .monospaced)).foregroundColor(.black)
-                        Text("双指捏合缩放 · 点击任意底片自动放大至最佳审片尺寸").font(.system(size: 9.5)).foregroundColor(.black.opacity(0.65))
+                        Text("本卷共 \(vm.frames.count) 张 · 点击任意底片自动放大居中审片").font(.system(size: 9.5)).foregroundColor(.black.opacity(0.65))
                     }
                     Spacer()
-                    Button { vm.stage = .shooting } label: {
+                    Button { vm.returnToCameraFromScanner() } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "camera.fill")
                             Text("返回拍摄")
@@ -1625,7 +1852,6 @@ struct LightTableScannerView: View {
                     }
                 }
 
-                // 看片台缩放控制条
                 HStack(spacing: 8) {
                     Image(systemName: "minus.magnifyingglass").foregroundColor(.black.opacity(0.7)).font(.system(size: 12))
                     Slider(value: $zoomScale, in: 0.75...2.4)
@@ -1650,7 +1876,6 @@ struct LightTableScannerView: View {
             .padding(.vertical, 8)
             .background(Color(white: 0.95))
 
-            // 2. 发光灯箱平铺看片台（支持自由缩放 + 点击单张自动放大居中审片）
             ScrollViewReader { proxy in
                 ScrollView([.horizontal, .vertical], showsIndicators: true) {
                     let cardWidth: CGFloat = 152 * zoomScale
@@ -1659,7 +1884,7 @@ struct LightTableScannerView: View {
                     LazyVGrid(columns: columns, spacing: 14) {
                         ForEach(Array(vm.frames.enumerated()), id: \.element.id) { idx, frame in
                             let rawImg = vm.loadRawImage(for: frame)
-                            let croppedRaw = FilmColorEngine.shared.cropToFilmAspectRatio(rawImg, format: frame.format)
+                            let croppedRaw = FilmColorEngine.shared.cropToLandscapeFilmAspectRatio(rawImg, format: frame.format)
                             let displayImg = frame.isScanned
                                 ? FilmColorEngine.shared.renderPositive(from: croppedRaw, stock: vm.currentStock, ev: frame.exposureEV, warmth: frame.warmthWB)
                                 : FilmColorEngine.shared.renderOrangeNegative(from: croppedRaw)
@@ -1676,10 +1901,8 @@ struct LightTableScannerView: View {
                                 HapticManager.shared.playRatchetTick()
                                 withAnimation(.spring(response: 0.38, dampingFraction: 0.78)) {
                                     if selectedIndex == idx && zoomScale > 1.5 {
-                                        // 再次点击已放大的底片，自动缩回全景平铺
                                         zoomScale = 1.0
                                     } else {
-                                        // 点击底片，自动放大到 1.85x 审片尺寸并平滑滚动至视野中央
                                         selectedIndex = idx
                                         zoomScale = 1.85
                                     }
@@ -1710,7 +1933,6 @@ struct LightTableScannerView: View {
                 )
             }
 
-            // 3. 单张精修控制台（参考图三半圆盘刻度感：选中单张时可调 EV / WB 并支持单张独立导出）
             if let sel = selectedIndex, vm.frames.indices.contains(sel) {
                 let currentFrame = vm.frames[sel]
                 VStack(spacing: 8) {
@@ -1774,7 +1996,6 @@ struct LightTableScannerView: View {
                 .padding(.horizontal, 10)
             }
 
-            // 4. 底部边框选择 + 一键全卷扫描 + 单张导出/一键导出整卷
             VStack(spacing: 8) {
                 HStack {
                     Picker("边框", selection: $borderStyle) {
@@ -1789,14 +2010,13 @@ struct LightTableScannerView: View {
                 }
 
                 HStack(spacing: 8) {
-                    // 一键全卷扫描
                     Button {
                         for i in 0..<vm.frames.count {
                             vm.frames[i].isScanned = true
                         }
                         vm.syncCurrentFramesToWarehouse()
                         HapticManager.shared.playFilmWoundLock()
-                        showToast("已一键扫描整卷 \(vm.frames.count) 张底片！")
+                        showToast("已一键扫描本卷全部 \(vm.frames.count) 张底片！")
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "wand.and.stars")
@@ -1807,7 +2027,6 @@ struct LightTableScannerView: View {
                         .background(Color.cyan).cornerRadius(8)
                     }
 
-                    // 导出当前选中单张
                     if let sel = selectedIndex, vm.frames.indices.contains(sel) {
                         Button {
                             exportSinglePhoto(at: sel)
@@ -1822,7 +2041,6 @@ struct LightTableScannerView: View {
                         }
                     }
 
-                    // 一键批量导出整卷
                     Button {
                         batchExportAllPhotos()
                     } label: {
@@ -1860,7 +2078,7 @@ struct LightTableScannerView: View {
         vm.frames[index].isScanned = true
         let frame = vm.frames[index]
         let rawImg = vm.loadRawImage(for: frame)
-        let croppedRaw = FilmColorEngine.shared.cropToFilmAspectRatio(rawImg, format: frame.format)
+        let croppedRaw = FilmColorEngine.shared.cropToLandscapeFilmAspectRatio(rawImg, format: frame.format)
         let posImg = FilmColorEngine.shared.renderPositive(from: croppedRaw, stock: vm.currentStock, ev: frame.exposureEV, warmth: frame.warmthWB)
         let finalImg = FilmColorEngine.shared.composeFinalExportImage(
             positiveImage: posImg,
@@ -1879,7 +2097,7 @@ struct LightTableScannerView: View {
             vm.frames[i].isScanned = true
             let frame = vm.frames[i]
             let rawImg = vm.loadRawImage(for: frame)
-            let croppedRaw = FilmColorEngine.shared.cropToFilmAspectRatio(rawImg, format: frame.format)
+            let croppedRaw = FilmColorEngine.shared.cropToLandscapeFilmAspectRatio(rawImg, format: frame.format)
             let posImg = FilmColorEngine.shared.renderPositive(from: croppedRaw, stock: vm.currentStock, ev: frame.exposureEV, warmth: frame.warmthWB)
             let finalImg = FilmColorEngine.shared.composeFinalExportImage(
                 positiveImage: posImg,
@@ -1903,7 +2121,7 @@ struct LightTableScannerView: View {
     }
 }
 
-// MARK: - 看片台上的单张横向齿孔底片组件（完全对齐图三与图五横向齿孔）
+// MARK: - 看片台上的单张横向齿孔底片组件
 struct LightTableContactCell: View {
     let image: UIImage
     let stock: FilmStock
@@ -1915,7 +2133,6 @@ struct LightTableContactCell: View {
         let photoHeight = (frame.format == .medium120) ? cellWidth : (cellWidth * 0.66)
 
         VStack(spacing: 4) {
-            // 顶部边缘喷码与上排横向齿孔
             HStack {
                 Text(stock.edgeCode)
                     .font(.system(size: max(6, cellWidth * 0.042), weight: .bold, design: .monospaced))
@@ -1937,7 +2154,6 @@ struct LightTableContactCell: View {
                 }
             }
 
-            // 底片画面（3:2 横向或 1:1 哈苏方画幅）
             Image(uiImage: image)
                 .resizable()
                 .scaledToFill()
@@ -1954,7 +2170,6 @@ struct LightTableContactCell: View {
                 }
             }
 
-            // 底部帧号与焦段标记
             HStack {
                 Text(frame.focalMM)
                     .font(.system(size: max(6, cellWidth * 0.04), weight: .semibold, design: .monospaced))
