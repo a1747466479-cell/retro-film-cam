@@ -26,6 +26,7 @@
     <dict/>
     <key>UISupportedInterfaceOrientations</key>
     <array>
+        <string>UIInterfaceOrientationPortrait</string>
         <string>UIInterfaceOrientationLandscapeRight</string>
         <string>UIInterfaceOrientationLandscapeLeft</string>
     </array>
@@ -34,9 +35,9 @@
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <false/>
     <key>NSCameraUsageDescription</key>
-    <string>需要使用相机与实体相机控制按键进行 Apple RAW 胶片拍摄与滑动过片</string>
+    <string>需要使用相机、闪光灯与实体相机控制按键进行胶片拍摄与滑动过片</string>
     <key>NSPhotoLibraryAddUsageDescription</key>
-    <string>需要将 16-Bit 3D LUT 冲洗扫描后的胶片保存至相册</string>
+    <string>需要将冲洗扫描后的胶片保存至相册</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>需要访问相册以保存胶片成片</string>
 </dict>
